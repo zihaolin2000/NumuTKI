@@ -56,7 +56,79 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   // Although unlikely, in principle these quanties could be shifted by a
   // systematic. And when they are, they'll only be shifted correctly if we
   // write these accessor functions.
+
+
+  //============================================================================
+  // CCQEnu selection custom CV universe Get functions
+  // - Ziggy
+  // to get phys_n_dead_discr_pair_upstream_prim_track_proj: use GetTDead()
+  // to get muon_theta: use GetThetamu()
+  //============================================================================
+
+  int GetNEventExtraTrackPID() const
+  {
+    return GetInt("event_extra_track_PID_sz");
+  }
+
+  int GetEventExtraTrackPID() const //FIXME: return type
+  {
+    return GetInt("event_extra_track_PID");
+  }
+
+  int GetHasInteractionVertex() const
+  {
+    return GetInt('has_interaction_vertex')
+  }
+
+  double GetProtonTrackEndX() const
+  {
+    return GetDouble("proton_track_endx");
+  }
   
+  double GetProtonTrackEndY() const
+  {
+    return GetDouble("proton_track_endy");
+  }
+
+  virtual int GetNImprovedMichel() const
+  {
+    return GetInt("improved_michel_vertex_type_sz");
+  }
+
+  std::vector<double> GetBlobsStartZ() const
+  {
+    return GetVecDouble("nonvtx_iso_blobs_start_position_z_in_prong");
+  }
+  
+  int GetNBlobsStartZ() const
+  {
+    return GetInt("nonvtx_iso_blobs_start_position_z_in_prong_sz");
+  }
+
+  std::vector<double> GetProtonNodesNormE() const
+  {
+    return GetVecDouble("proton_nodes_nodesNormE");
+  }
+
+  int GetNProtonNodesNormE() const
+  {
+    return GetInt("proton_nodes_nodesNormE_sz");
+  }
+
+  int GetNuHelicity() const
+  {
+    return GetInt("nuHelicity");
+  }
+
+  double GetCCQEnuQ2() const
+  {
+    return GetDouble("Q2_CCQE");
+  }
+
+  //============================================================================
+  //============================================================================
+
+
   //Muon kinematics
   double GetMuonPT() const //GeV/c
   {

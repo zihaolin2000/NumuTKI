@@ -64,8 +64,12 @@ enum ErrorCodes
 #include "PlotUtils/Hist2DWrapper.h"
 #include "PlotUtils/MacroUtil.h"
 #include "PlotUtils/MnvPlotter.h"
-#include "PlotUtils/CCInclusiveCuts.h"
-#include "PlotUtils/CCInclusiveSignal.h"
+// Replace CC inclusive cuts with CCQE nu cuts from NumuTKI.
+// -- Ziggy
+// #include "PlotUtils/CCInclusiveCuts.h"
+// #include "PlotUtils/CCInclusiveSignal.h"
+#include "cuts/NumuTKICuts.h"
+#include "cuts/NumuTKISignal.h"
 #include "PlotUtils/CrashOnROOTMessage.h" //Sets up ROOT's debug callbacks by itself
 #include "PlotUtils/Cutter.h"
 #include "PlotUtils/Model.h"
@@ -339,17 +343,43 @@ int main(const int argc, const char** argv)
   PlotUtils::Cutter<CVUniverse, MichelEvent>::reco_t sidebands, preCuts;
   PlotUtils::Cutter<CVUniverse, MichelEvent>::truth_t signalDefinition, phaseSpace;
 
-  const double minZ = 5980, maxZ = 8422, apothem = 850; //All in mm
-  preCuts.emplace_back(new reco::ZRange<CVUniverse, MichelEvent>("Tracker", minZ, maxZ));
-  preCuts.emplace_back(new reco::Apothem<CVUniverse, MichelEvent>(apothem));
-  preCuts.emplace_back(new reco::MaxMuonAngle<CVUniverse, MichelEvent>(20.));
-  preCuts.emplace_back(new reco::HasMINOSMatch<CVUniverse, MichelEvent>());
-  preCuts.emplace_back(new reco::NoDeadtime<CVUniverse, MichelEvent>(1, "Deadtime"));
-  preCuts.emplace_back(new reco::IsNeutrino<CVUniverse, MichelEvent>());
-                                                                                                                                                   
+  // Comment out MINERvA-101-cross-section CC numu inclusive cuts.
+  // -- Ziggy 2026/1/9
+  // const double minZ = 5980, maxZ = 8422, apothem = 850; //All in mm
+  // preCuts.emplace_back(new reco::ZRange<CVUniverse, MichelEvent>("Tracker", minZ, maxZ));
+  // preCuts.emplace_back(new reco::Apothem<CVUniverse, MichelEvent>(apothem));
+  // preCuts.emplace_back(new reco::MaxMuonAngle<CVUniverse, MichelEvent>(20.));
+  // preCuts.emplace_back(new reco::HasMINOSMatch<CVUniverse, MichelEvent>());
+  // preCuts.emplace_back(new reco::NoDeadtime<CVUniverse, MichelEvent>(1, "Deadtime"));
+  // preCuts.emplace_back(new reco::IsNeutrino<CVUniverse, MichelEvent>());
+
+  const double minZ = 5980, maxZ = 8422, apothem = 1100; // Dan uses apothem = 1100. -- Ziggy
+  
+  // Add Dan's CCQEnu selection cuts
+  // -- Ziggy
+  preCuts.emplace_back(new reco::PassInteractionVertexCut<CVUniverse, MichelEvent>());
+  preCuts.emplace_back(new reco::PassDeadTimeCut<CVUniverse, MichelEvent>());
+  preCuts.emplace_back(new reco::PassNuHelicityCut<CVUniverse, MichelEvent>());
+  preCuts.emplace_back(new reco::PassMultiplicityCut<CVUniverse, MichelEvent>(2)); // Pass minimum multiplicity 2. -- Ziggy
+  preCuts.emplace_back(new reco::PassImproveMichelCut<CVUniverse, MichelEvent>());
+  preCuts.emplace_back(new reco::PassExtraTracksProtonsCut<CVUniverse, MichelEvent>());
+  preCuts.emplace_back(new reco::PassNBlobsCut<CVUniverse, MichelEvent>());
+  preCuts.emplace_back(new reco::PassTrackAngleCut<CVUniverse, MichelEvent>());
+  preCuts.emplace_back(new reco::PassProtonContainmentCut<CVUniverse, MichelEvent>(apothem)); // Pass apothem value 1100.0. -- Ziggy
+  preCuts.emplace_back(new reco::PassHybridProtonNodeCut<CVUniverse, MichelEvent>(10.0)); // Pass cutval 10.0. -- Ziggy
+  
+  // Add CCQE-like Numu signal definition
+  // - Ziggy
   signalDefinition.emplace_back(new truth::IsNeutrino<CVUniverse>());
   signalDefinition.emplace_back(new truth::IsCC<CVUniverse>());
+  signalDefinition.emplace_back(new truth::HasSignalProton<CVUniverse>());
+  signalDefinition.emplace_back(new truth::HasNoMeson<CVUniverse>());
+  signalDefinition.emplace_back(new truth::HasNoPhoton<CVUniverse>());
                                                                                                                                                    
+  // TODO: choose phase space and sidebands.
+  // Will keep MuonAngle phase space constraint: < 20 deg (0.349 rad).
+  // What about ZRange, Apothem, PZMuMin?
+  // -- Ziggy
   phaseSpace.emplace_back(new truth::ZRange<CVUniverse>("Tracker", minZ, maxZ));
   phaseSpace.emplace_back(new truth::Apothem<CVUniverse>(apothem));
   phaseSpace.emplace_back(new truth::MuonAngle<CVUniverse>(20.));

@@ -1,5 +1,4 @@
-
-// File: NumuTKI.h
+// File: NumuTKICuts.h
 // This file is forked from Carlos Pernas's NuETKI/cuts/NuETKICuts.h forked from
 // Andrew's CC inclusive cuts.
 // Additional cuts following Daniel Ruterbories's CCQE numu selection template
@@ -49,8 +48,281 @@ namespace utils {
     return result;
   }
 }
+
 namespace reco
 {
+  // FIXME:
+  // q2Shift, tdead_max,
+  //============================================================================
+  // Implement CCQEnu cuts following Dan's template 
+  // - Ziggy
+  //============================================================================
+
+  // Check if interaction has vertex
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassInteractionVertex: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+      PassInteractionVertex(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Interaction Vertex Cut") {}
+
+    private:
+      bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+      {
+        return ( univ.GetHasInteractionVertex() == 1 )
+      }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassNuHelicity: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassNuHelicity(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Nu Helicity Cut") {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      int nu_helicity_cut(1);// 1 if neutrino, 2 if anti neutrino
+      bool neutrinoMode(true);
+
+      int nu_helicity = univ.GetNuHelicity();
+      if(neutrinoMode){
+        if( nu_helicity != nu_helicity_cut ) return false;
+      }
+      else{
+        if( nu_helicity != nu_helicity_cut + 1 ) return false;
+      }
+      return true;
+    }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassDeadTime: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassDeadTime(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Dead Time Cut") {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      double tdead_max(0.5);
+      if( univ.GetTDead() > tdead_max ) return false;
+      return true;
+    }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassImproveMichel: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassImproveMichel(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Improve Michel") {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      bool improved_michel = false;
+      if ( univ.GetNImprovedMichel() > 0 ) improved_michel = true;
+      return !improved_michel;
+    }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassExtraTracksProtons: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassExtraTracksProtons(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Extra Tracks Protons") {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      double q2Shift(0.0);
+      std::vector<double> scoreShifts{}; // null vector placeholder for scoreShifts
+
+      bool extra_tracks_are_all_protons = true; 
+      double q2_reco = univ.GetCCQEnuQ2() + q2Shift; 
+      q2_reco /= std::pow(10,6);
+      
+      double extraTracks_protonScore1_reco = 0.0;
+      std::vector<double> event_extra_track_PID = univ.GetEventExtraTrackPID();
+      
+      //-------------------------------------------------
+      // Exit if there are no secondary protons 
+      //-------------------------------------------------
+      if( univ.GetNEventExtraTrackPID() == 0 )  { 
+        return true; 
+      } else {
+        for( int i = 0; i < univ.GetNEventExtraTrackPID(); ++i ) {
+          //------------------------------------------------------------------
+          // scoreShifts[] will be NULL for the CV Monte-Carlo and Data ! 
+          //------------------------------------------------------------------
+          // if( scoreShifts == NULL ){
+          //   extraTracks_protonScore1_reco = event_extra_track_PID[i]; 
+          // } else {
+          //   extraTracks_protonScore1_reco = event_extra_track_PID[i] + scoreShifts[i]; 
+          // }
+          extraTracks_protonScore1_reco = event_extra_track_PID[i];// CV universe only - Ziggy          
+        
+          if( extraTracks_protonScore1_reco < 0.25 ) extra_tracks_are_all_protons = false;
+        }
+      }
+      return extra_tracks_are_all_protons;
+    }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassNBlobs public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassNBlobs(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass N Blobs") {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      int n_blobs = 0;
+      int nblobs_max(1);
+
+      std::vector<double> blobs_startz = univ.GetBlobsStartZ();
+      for(int k = 0; k < univ.GetNBlobsStartZ(); ++k){
+        if(blobs_startz[k] > 4750) n_blobs++;
+      }
+      if( n_blobs > nblobs_max ) return false;
+      return true;
+    }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassTrackAngleCut: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassTrackAngleCut(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Track Angle Cut") {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      double muon_theta = univ.GetMuonTheta();
+      if( muon_theta > 0.349 || TMath::IsNaN(muon_theta) ) return false;
+      return true;
+    }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassProtonContainment: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassProtonContainment(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Proton Containment") {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      double apothemCut = 1100.0;
+      bool contained = false;
+      double x = univ.GetProtonEndX();
+      double y = univ.GetProtonEndY();
+
+      if(x*x + y*y < apothemCut*apothemCut) return true;
+      
+      double lenOfSide = apothemCut * ( 2 / sqrt(3) );
+      
+      if( x > apothemCut )
+        return false;
+      
+      if( y < lenOfSide/2.0 )
+        return true;
+      
+      double slope = (lenOfSide / 2.0) / apothemCut;
+      if( y < lenOfSide - x*slope )
+        return true;
+      
+      return false;
+    }
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassHybridProtonNode: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassHybridProtonNode(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Hybrid Proton Node") {}
+
+    private:
+    // The primary proton check only serves an helper function here.
+    // In principle it should be another cut class.
+    // - Ziggy
+    bool passPrimaryProtonNode(const UNIVERSE& univ) const
+    {
+      //Cut Values based on 22302
+      //Node 0-1
+      //Node 2
+      //Node 3
+      //Node 4
+      //Node 5
+      //Node 6
+      double cutval1 = 19;
+      double cutval2 = 10;
+      double cutval3 = 9;
+      double cutval4 = 8;
+      double cutval5 = 5;
+
+      int n_nodes = univ.GetNProtonNodesNormE();
+      std::vector<double> nodesNormE = univ.GetProtonNodesNormE(); 
+      //Primary proton
+      if( n_nodes == 0 ) return false;///no nodes
+      if( nodesNormE[0] + nodesNormE[1] < cutval1 ) return false;
+      if( nodesNormE[2] < cutval2 ) return false;
+      if( nodesNormE[3] < cutval3 ) return false;
+      if( nodesNormE[4] < cutval4 ) return false;
+      if( n_nodes > 5 ) {
+        if( nodesNormE[5] < cutval5 ) return false;
+      }
+
+      //survived loops?
+      return true;
+    }
+
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      double cutval = 10.0;
+      vector<double> means;
+      means.push_back(31.302);
+      means.push_back(11.418);
+      means.push_back(9.769);
+      means.push_back(8.675);
+      means.push_back(7.949);
+      vector<double> sigmas;
+      sigmas.push_back(8.997);
+      sigmas.push_back(3.075);
+      sigmas.push_back(2.554);
+      sigmas.push_back(2.484);
+      sigmas.push_back(2.232);
+      
+      double nodeEnergyVal = 0.0;
+      double chi2 = 0.0;
+      int n_nodes = univ.GetNProtonNodesNormE();
+      std::vector<double> nodesNormE = univ.GetProtonNodesNormE();
+      if( n_nodes > 5 ){
+        for( int i = 0; i < n_nodes; i++ ){
+          if( i == 6 ) break;
+          if( i == 0 ) nodeEnergyVal += nodesNormE[0];
+          else if( i == 1 ) nodeEnergyVal += nodesNormE[1];
+          else nodeEnergyVal = nodesNormE[i];
+          if( i>= 1 ){
+            chi2 += (nodeEnergyVal-means[i-1])*(nodeEnergyVal-means[i-1])/(sigmas[i-1]*sigmas[i-1]);
+          }
+        }
+      }
+      else{
+        bool pass = passPrimaryProtonNodeCut(univ);
+        if( pass ) chi2 = 0;
+        else chi2 = 75;
+      }
+      return chi2 < cutval;
+    }
+  };
+
+  //============================================================================
+  //============================================================================
+
+
+
+
   //============================================================================
   //Example 1: The simplest cut example. Just derive from Cut<> base class.
   //============================================================================

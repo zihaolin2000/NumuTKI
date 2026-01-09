@@ -70,9 +70,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
     return GetInt("event_extra_track_PID_sz");
   }
 
-  int GetEventExtraTrackPID() const //FIXME: return type
+  std::vector<double> GetEventExtraTrackPID() const //FIXME: return type
   {
-    return GetInt("event_extra_track_PID");
+    return GetVecDouble("event_extra_track_PID");
   }
 
   int GetHasInteractionVertex() const
@@ -123,6 +123,11 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   double GetCCQEnuQ2() const
   {
     return GetDouble("Q2_CCQE");
+  }
+
+  double GetMuonTheta() const
+  {
+    return GetThetamu();
   }
 
   //============================================================================

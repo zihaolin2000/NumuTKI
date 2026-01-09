@@ -60,7 +60,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
 
   //============================================================================
   // CCQEnu selection custom CV universe Get functions
-  // - Ziggy
+  // -- Ziggy
   // to get phys_n_dead_discr_pair_upstream_prim_track_proj: use GetTDead()
   // to get muon_theta: use GetThetamu()
   //============================================================================
@@ -128,6 +128,11 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   double GetMuonTheta() const
   {
     return GetThetamu();
+  }
+
+  double GetMultiplicity() const
+  {
+    return GetInt("multiplicity");
   }
 
   //============================================================================

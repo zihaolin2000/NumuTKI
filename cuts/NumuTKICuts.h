@@ -104,7 +104,7 @@ namespace reco
     private:
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
     {
-      double tdead_max(0.5);
+      int tdead_max(1);
       if( univ.GetTDead() > tdead_max ) return false;
       return true;
     }

@@ -2,7 +2,8 @@
 // File: NumuTKISignal.h
 // This file is forked from Carlos Pernas's NuETKI/cuts/NuETKISignal.h, forked
 // from Andrew's CCInclusiveSignal.h.
-// - Zihao Lin zlin22@ur.rochester.edu
+// Some Nue quantities are switched to Numu.
+// -- Zihao Lin zlin22@ur.rochester.edu
 
 
 //File: CCInclusiveSignal.h
@@ -24,7 +25,7 @@ namespace truth
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
-        return univ.GetTruthNuPDG() == 12;
+        return univ.GetTruthNuPDG() == 14;
       }
   };
 
@@ -40,13 +41,13 @@ namespace truth
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
-	return univ.GetTruthNuPDG() == -12;
+        return univ.GetTruthNuPDG() == -14;
       }
     };
 
-  //Just checks if its electron flavor, will accept both nu and anti nu
+  // Checks muon flavor, will accept both nu and anti nu
   template <class UNIVERSE>
-    class IsNue: public PlotUtils::SignalConstraint<UNIVERSE>
+    class IsNumu: public PlotUtils::SignalConstraint<UNIVERSE>
     {
     public:
     IsNue(): PlotUtils::SignalConstraint<UNIVERSE>("IsNuE or AntiNuE")
@@ -56,7 +57,7 @@ namespace truth
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
-	return abs(univ.GetTruthNuPDG()) == 12;
+        return abs(univ.GetTruthNuPDG()) == 14;
       }
     };
 
@@ -77,6 +78,8 @@ namespace truth
       }
   };
 
+// TODO: Eavail and TrueElectronEnergy switch to numu, muon quantities
+/*
   //electron neutrino truth definitions here (Carlos P, Nov 2023)
   template <class UNIVERSE>
     class Eavail: public PlotUtils::SignalConstraint<UNIVERSE>
@@ -111,7 +114,7 @@ namespace truth
 
       const double fMin;
     };
-
+*/
 
   template <class UNIVERSE>
     class HasSignalProton: public PlotUtils::SignalConstraint<UNIVERSE>

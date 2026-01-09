@@ -4,7 +4,7 @@
 // Additional cuts following Daniel Ruterbories's CCQE numu selection template
 // are implemented. They will be used for my BDT reweighter  CCQE-like numu 
 // migration matrix and efficiency study.
-// - Zihao Lin zlin22@ur.rochester.edu
+// -- Zihao Lin zlin22@ur.rochester.edu
 
 //==============================================================================
 //In this file several inclusive cuts are defined.
@@ -55,15 +55,15 @@ namespace reco
   // q2Shift, tdead_max,
   //============================================================================
   // Implement CCQEnu cuts following Dan's template 
-  // - Ziggy
+  // -- Ziggy
   //============================================================================
 
   // Check if interaction has vertex
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassInteractionVertex: public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassInteractionVertexCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-      PassInteractionVertex(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Interaction Vertex Cut") {}
+      PassInteractionVertexCut(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Interaction Vertex Cut") {}
 
     private:
       bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
@@ -73,10 +73,10 @@ namespace reco
   };
 
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassNuHelicity: public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassNuHelicityCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-    PassNuHelicity(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Nu Helicity Cut") {}
+    PassNuHelicityCut(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Nu Helicity Cut") {}
 
     private:
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
@@ -96,10 +96,10 @@ namespace reco
   };
 
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassDeadTime: public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassDeadTimeCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-    PassDeadTime(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Dead Time Cut") {}
+    PassDeadTimeCut(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Dead Time Cut") {}
 
     private:
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
@@ -111,10 +111,10 @@ namespace reco
   };
 
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassImproveMichel: public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassImproveMichelCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-    PassImproveMichel(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Improve Michel") {}
+    PassImproveMichelCut(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Improve Michel Cut") {}
 
     private:
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
@@ -126,10 +126,10 @@ namespace reco
   };
 
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassExtraTracksProtons: public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassExtraTracksProtonsCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-    PassExtraTracksProtons(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Extra Tracks Protons") {}
+    PassExtraTracksProtonsCut(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Extra Tracks Protons Cut") {}
 
     private:
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
@@ -159,7 +159,7 @@ namespace reco
           // } else {
           //   extraTracks_protonScore1_reco = event_extra_track_PID[i] + scoreShifts[i]; 
           // }
-          extraTracks_protonScore1_reco = event_extra_track_PID[i];// CV universe only - Ziggy          
+          extraTracks_protonScore1_reco = event_extra_track_PID[i];// CV universe only -- Ziggy          
         
           if( extraTracks_protonScore1_reco < 0.25 ) extra_tracks_are_all_protons = false;
         }
@@ -169,16 +169,16 @@ namespace reco
   };
 
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassNBlobs public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassNBlobsCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-    PassNBlobs(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass N Blobs") {}
+    PassNBlobsCut(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass N Blobs Cut") {}
 
     private:
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
     {
       int n_blobs = 0;
-      int nblobs_max(1);
+      const int nblobs_max(1);
 
       std::vector<double> blobs_startz = univ.GetBlobsStartZ();
       for(int k = 0; k < univ.GetNBlobsStartZ(); ++k){
@@ -205,47 +205,48 @@ namespace reco
   };
 
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassProtonContainment: public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassProtonContainmentCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-    PassProtonContainment(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Proton Containment") {}
+    PassProtonContainmentCut(const double apothem): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Proton Containment Cut"), fApothem(apothem) {}
 
     private:
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
     {
-      double apothemCut = 1100.0;
-      bool contained = false;
+      // double apothemCut = 1100.0;
       double x = univ.GetProtonEndX();
       double y = univ.GetProtonEndY();
 
-      if(x*x + y*y < apothemCut*apothemCut) return true;
+      if(x*x + y*y < fApothem*fApothem) return true;
       
-      double lenOfSide = apothemCut * ( 2 / sqrt(3) );
+      double lenOfSide = fApothem * ( 2 / sqrt(3) );
       
-      if( x > apothemCut )
+      if( x > fApothem )
         return false;
       
       if( y < lenOfSide/2.0 )
         return true;
       
-      double slope = (lenOfSide / 2.0) / apothemCut;
+      double slope = (lenOfSide / 2.0) / fApothem;
       if( y < lenOfSide - x*slope )
         return true;
       
       return false;
     }
+    const double fApothem;
+
   };
 
   template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
-  class PassHybridProtonNode: public PlotUtils::Cut<UNIVERSE, EVENT>
+  class PassHybridProtonNodeCut: public PlotUtils::Cut<UNIVERSE, EVENT>
   {
     public:
-    PassHybridProtonNode(): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Hybrid Proton Node") {}
+    PassHybridProtonNodeCut(const double cutval): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Hybrid Proton Node Cut"), fCutval(cutval) {}
 
     private:
     // The primary proton check only serves an helper function here.
     // In principle it should be another cut class.
-    // - Ziggy
+    // -- Ziggy
     bool passPrimaryProtonNode(const UNIVERSE& univ) const
     {
       //Cut Values based on 22302
@@ -279,7 +280,6 @@ namespace reco
 
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
     {
-      double cutval = 10.0;
       vector<double> means;
       means.push_back(31.302);
       means.push_back(11.418);
@@ -313,8 +313,26 @@ namespace reco
         if( pass ) chi2 = 0;
         else chi2 = 75;
       }
-      return chi2 < cutval;
+      return chi2 < fCutval;
     }
+    const double fCutval;
+
+  };
+
+  template <class UNIVERSE, class EVENT = PlotUtils::detail::empty>
+  class PassMultiplicityCut: public PlotUtils::Cut<UNIVERSE, EVENT>
+  {
+    public:
+    PassMultiplicityCut(const int min): PlotUtils::Cut<UNIVERSE, EVENT>("Pass Multiplicity Cut"), fMin(min) {}
+
+    private:
+    bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
+    {
+      if( univ.GetMultiplicity() > fMin ) return false;
+      return true;
+    }
+
+    const int fMin;
   };
 
   //============================================================================

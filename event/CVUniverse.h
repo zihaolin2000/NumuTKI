@@ -18,6 +18,10 @@
 
 #include "PlotUtils/MinervaUniverse.h"
 
+// ROOT includes
+#include "Math/RotationX.h"
+#include "Math/Vector3D.h"
+
 class CVUniverse : public PlotUtils::MinervaUniverse {
 
   public:
@@ -42,6 +46,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
 
   static constexpr int PDG_n = 2112;
   static constexpr int PDG_p = 2212;
+  static constexpr double PI = 3.141592653589793;
 
   // ========================================================================
   // Write a "Get" function for all quantities access by your analysis.
@@ -77,15 +82,15 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
 
   int GetHasInteractionVertex() const
   {
-    return GetInt('has_interaction_vertex')
+    return GetInt("has_interaction_vertex");
   }
 
-  double GetProtonTrackEndX() const
+  double GetProtonEndX() const
   {
     return GetDouble("proton_track_endx");
   }
   
-  double GetProtonTrackEndY() const
+  double GetProtonEndY() const
   {
     return GetDouble("proton_track_endy");
   }
@@ -133,6 +138,80 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   double GetMultiplicity() const
   {
     return GetInt("multiplicity");
+  }
+
+  // Following functions are copied from Carlos's NuETKI/event/CVUniverse.h.
+  // -- Ziggy
+  bool GetHasSignalFSProton() const
+  {
+    bool hasProton = false;
+    int i = GetHighestEnergySignalProtonIndex();
+    if (i > -1)
+    {
+      hasProton = true;
+    }
+    return hasProton;
+  }
+
+  int GetHighestEnergySignalProtonIndex() const
+  {
+    double highestEnergy = -999;
+    int index = -999;
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    //fs particle energies in MeV
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    for (int i = 0; i < FSParticles.size(); i++){
+      //So I can choose to count any protons, or only protons above our reco threshold. 
+      //if (FSParticles[i] == 2212){
+      if (FSParticles[i] == 2212 && energies[i] > highestEnergy){
+        //require momentum between 450 and 1200 MeV/C , and angle under 70 degrees (same as other TKI analyses)
+        
+        double protonP = sqrt(pow(GetVecElem("mc_FSPartE", i),2) - pow(M_p, 2)); //in MeV/C
+        ROOT::Math::XYZVector p(GetVecElem("mc_FSPartPx", i), GetVecElem("mc_FSPartPy", i), GetVecElem("mc_FSPartPz", i)); 
+        ROOT::Math::RotationX r(-3.3 * (PI / 180.));
+        double protonTheta = (r(p)).Theta()*(180/PI); //in degrees
+        //if (protonP>450 && protonP<1200 && protonTheta<70){
+        if (protonP>450 && protonP<1200 && (protonTheta<70 || protonTheta>110)){ //Testing allowing backwards protons??
+          highestEnergy = energies[i];
+          index = i;
+        }
+      }
+    }
+    return index;
+  }
+
+  //Checks for pions & kaons
+  bool GetHasFSMeson() const
+  {
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    bool hasMeson = false;
+    for (int i = 0; i < FSParticles.size(); i++)
+    {
+      //std::cout << "final state particle: " << i << ": " << FSParticles[i] << std::endl;
+      if (abs(FSParticles[i]) == 211 || abs(FSParticles[i]) == 321 || abs(FSParticles[i]) == 311 || abs(FSParticles[i]) == 130 || abs(FSParticles[i]) == 111)
+      {
+      	hasMeson = true;
+      }
+    }
+    //std::cout << "hasMeson: " << hasMeson<< std::endl;
+    return hasMeson;
+  }
+
+  bool GetHasFSPhoton() const
+  {
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    bool hasPhoton = false;
+    for (int i = 0; i < FSParticles.size(); i++)
+    {
+      //std::cout << "final state particle: " << i << ": " << FSParticles[i] << std::endl;
+      if (abs(FSParticles[i]) == 22 && energies[i] > 10)
+      {
+      	hasPhoton = true;
+      }
+    }
+    //std::cout << "hasPhoton: " << hasPhoton<< std::endl;
+    return hasPhoton;
   }
 
   //============================================================================

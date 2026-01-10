@@ -41,7 +41,8 @@ namespace utils {
 
     result.erase(result.find_last_not_of('0') + 1); //trims trailing zeroes
 
-    if (!result.empty() && result.back() == '.') { //trims dot if that's the last char
+    if (!result.empty() && result.back() == '.')
+    { //trims dot if that's the last char
         result.pop_back();
     }
 
@@ -68,7 +69,7 @@ namespace reco
     private:
       bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
       {
-        return ( univ.GetHasInteractionVertex() == 1 )
+        return ( univ.GetHasInteractionVertex() == 1 );
       }
   };
 
@@ -147,10 +148,14 @@ namespace reco
       //-------------------------------------------------
       // Exit if there are no secondary protons 
       //-------------------------------------------------
-      if( univ.GetNEventExtraTrackPID() == 0 )  { 
+      if( univ.GetNEventExtraTrackPID() == 0 )
+      { 
         return true; 
-      } else {
-        for( int i = 0; i < univ.GetNEventExtraTrackPID(); ++i ) {
+      }
+      else
+      {
+        for( int i = 0; i < univ.GetNEventExtraTrackPID(); ++i )
+        {
           //------------------------------------------------------------------
           // scoreShifts[] will be NULL for the CV Monte-Carlo and Data ! 
           //------------------------------------------------------------------
@@ -181,7 +186,8 @@ namespace reco
       const int nblobs_max(1);
 
       std::vector<double> blobs_startz = univ.GetBlobsStartZ();
-      for(int k = 0; k < univ.GetNBlobsStartZ(); ++k){
+      for(int k = 0; k < univ.GetNBlobsStartZ(); ++k)
+      {
         if(blobs_startz[k] > 4750) n_blobs++;
       }
       if( n_blobs > nblobs_max ) return false;
@@ -247,7 +253,7 @@ namespace reco
     // The primary proton check only serves an helper function here.
     // In principle it should be another cut class.
     // -- Ziggy
-    bool passPrimaryProtonNode(const UNIVERSE& univ) const
+    bool passPrimaryProtonNodeCut(const UNIVERSE& univ) const
     {
       //Cut Values based on 22302
       //Node 0-1
@@ -270,7 +276,8 @@ namespace reco
       if( nodesNormE[2] < cutval2 ) return false;
       if( nodesNormE[3] < cutval3 ) return false;
       if( nodesNormE[4] < cutval4 ) return false;
-      if( n_nodes > 5 ) {
+      if( n_nodes > 5 )
+      {
         if( nodesNormE[5] < cutval5 ) return false;
       }
 
@@ -280,13 +287,13 @@ namespace reco
 
     bool checkCut(const UNIVERSE& univ, EVENT& /*evt*/) const override
     {
-      vector<double> means;
+      std::vector<double> means;
       means.push_back(31.302);
       means.push_back(11.418);
       means.push_back(9.769);
       means.push_back(8.675);
       means.push_back(7.949);
-      vector<double> sigmas;
+      std::vector<double> sigmas;
       sigmas.push_back(8.997);
       sigmas.push_back(3.075);
       sigmas.push_back(2.554);
@@ -297,18 +304,22 @@ namespace reco
       double chi2 = 0.0;
       int n_nodes = univ.GetNProtonNodesNormE();
       std::vector<double> nodesNormE = univ.GetProtonNodesNormE();
-      if( n_nodes > 5 ){
-        for( int i = 0; i < n_nodes; i++ ){
+      if( n_nodes > 5 )
+      {
+        for( int i = 0; i < n_nodes; i++ )
+        {
           if( i == 6 ) break;
           if( i == 0 ) nodeEnergyVal += nodesNormE[0];
           else if( i == 1 ) nodeEnergyVal += nodesNormE[1];
           else nodeEnergyVal = nodesNormE[i];
-          if( i>= 1 ){
+          if( i>= 1 )
+          {
             chi2 += (nodeEnergyVal-means[i-1])*(nodeEnergyVal-means[i-1])/(sigmas[i-1]*sigmas[i-1]);
           }
         }
       }
-      else{
+      else
+      {
         bool pass = passPrimaryProtonNodeCut(univ);
         if( pass ) chi2 = 0;
         else chi2 = 75;

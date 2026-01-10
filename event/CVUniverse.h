@@ -112,22 +112,22 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
 
   std::vector<double> GetProtonNodesNormE() const
   {
-    return GetVecDouble("proton_nodes_nodesNormE");
+    return GetVecDouble((GetAnaToolName()+"_proton_nodes_nodesNormE").c_str());
   }
 
   int GetNProtonNodesNormE() const
   {
-    return GetInt("proton_nodes_nodesNormE_sz");
+    return GetInt((GetAnaToolName()+"_proton_nodes_nodesNormE_sz").c_str());
   }
 
   int GetNuHelicity() const
   {
-    return GetInt("nuHelicity");
+    return GetInt((GetAnaToolName()+"_nuHelicity").c_str());
   }
 
   double GetCCQEnuQ2() const
   {
-    return GetDouble("Q2_CCQE");
+    return GetDouble((GetAnaToolName()+"_Q2_CCQE").c_str());
   }
 
   double GetMuonTheta() const

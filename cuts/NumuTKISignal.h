@@ -50,7 +50,7 @@ namespace truth
     class IsNumu: public PlotUtils::SignalConstraint<UNIVERSE>
     {
     public:
-    IsNue(): PlotUtils::SignalConstraint<UNIVERSE>("IsNuE or AntiNuE")
+    IsNumu(): PlotUtils::SignalConstraint<UNIVERSE>("IsNumu or AntiNumu")
 	{
 	}
 
@@ -116,6 +116,8 @@ namespace truth
     };
 */
 
+  // Copying classes from Carlos's NuETKI/cuts/NuETKISignal.h.
+  // -- Ziggy
   template <class UNIVERSE>
     class HasSignalProton: public PlotUtils::SignalConstraint<UNIVERSE>
     {

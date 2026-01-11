@@ -152,7 +152,7 @@ namespace truth
     class HasNoPhoton: public PlotUtils::SignalConstraint<UNIVERSE>
     {
     public:
-    HasNoPhoton(): PlotUtils::SignalConstraint<UNIVERSE>("Has no final state photons above 10 MeV")
+    HasNoPhoton(): PlotUtils::SignalConstraint<UNIVERSE>("HasNoPhoton (above 10 MeV)")
       {
       }
 

@@ -46,7 +46,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
 
   static constexpr int PDG_n = 2112;
   static constexpr int PDG_p = 2212;
-  static constexpr double PI = 3.141592653589793;
+  static constexpr double pi = 3.141592653589793;
 
   // ========================================================================
   // Write a "Get" function for all quantities access by your analysis.
@@ -74,7 +74,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   {
     return GetInt("event_extra_track_PID_sz");
   }
-
+ 
   std::vector<double> GetEventExtraTrackPID() const //FIXME: return type
   {
     return GetVecDouble("event_extra_track_PID");
@@ -141,6 +141,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   }
 
   // Following functions are copied from Carlos's NuETKI/event/CVUniverse.h.
+  // Change Carlos's electron naming to lepton.
   // -- Ziggy
   bool GetHasSignalFSProton() const
   {
@@ -168,8 +169,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
         
         double protonP = sqrt(pow(GetVecElem("mc_FSPartE", i),2) - pow(M_p, 2)); //in MeV/C
         ROOT::Math::XYZVector p(GetVecElem("mc_FSPartPx", i), GetVecElem("mc_FSPartPy", i), GetVecElem("mc_FSPartPz", i)); 
-        ROOT::Math::RotationX r(-3.3 * (PI / 180.));
-        double protonTheta = (r(p)).Theta()*(180/PI); //in degrees
+        ROOT::Math::RotationX r(-3.3 * (pi / 180.));
+        double protonTheta = (r(p)).Theta()*(180/pi); //in degrees
         //if (protonP>450 && protonP<1200 && protonTheta<70){
         if (protonP>450 && protonP<1200 && (protonTheta<70 || protonTheta>110)){ //Testing allowing backwards protons??
           highestEnergy = energies[i];
@@ -180,7 +181,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
     return index;
   }
 
-  //Checks for pions & kaons
+  // Checks for pions & kaons
   bool GetHasFSMeson() const
   {
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
@@ -212,6 +213,177 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
     }
     //std::cout << "hasPhoton: " << hasPhoton<< std::endl;
     return hasPhoton;
+  }
+
+  //Returns a root XYZVector object containing the lepton (muon for my CCQEnu study -- Ziggy) transverse 3 momentum
+  ROOT::Math::XYZVector GetProtonPtVec() const{
+    ROOT::Math::XYZVector protonP_vec(GetDouble("MasterAnaDev_proton_Px_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Py_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Pz_fromdEdx")/1000.);
+    ROOT::Math::RotationX r(-3.3 * (pi / 180.)); 
+    ROOT::Math::RotationX r2(3.3 * (pi / 180.));
+
+    ROOT::Math::XYZVector protonPt_vec = r(protonP_vec);
+    protonPt_vec.SetZ(0);
+    protonPt_vec = r2(protonPt_vec);
+
+    return protonPt_vec;
+  }
+
+  //Returns a root XYZVector object containing the sum of the proton transverse 3 momentum
+  //and the lepton (muon for my CCQEnu study -- Ziggy) transverse 3 momentum
+  //which is then used to calculate TKI variables
+  //Remember: z direction != beam direction so transverse doesn't exactly mean z components are zero, although they should be small
+  ROOT::Math::XYZVector GetDeltaPtVec() const{
+    ROOT::Math::XYZVector leptonPt_vec = GetLeptonPtVec();
+    ROOT::Math::XYZVector protonPt_vec = GetProtonPtVec();
+        
+    //ROOT::Math::XYZVector deltaP_vec = leptonP_vec + protonP_vec; //sum of the full 3 momenta. Not sure if I need this so commenting it out for now
+    ROOT::Math::XYZVector deltaPt_vec = leptonPt_vec + protonPt_vec;
+    
+    //std::cout << "delta P total (kinda useless?): " << sqrt(deltaP_vec.Mag2()) << std::endl;
+    //std::cout << "delta Ptx: " << deltaPt_vec.X() << std::endl;
+    //std::cout << "delta Pty: " << deltaPt_vec.Y() << std::endl;
+    //std::cout << "delta Pt: " << sqrt(deltaPt_vec.Mag2()) << std::endl;
+    //std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\n" << std::endl;
+    return deltaPt_vec;
+  }
+
+  //delta pT (magnitude of the vector), in GeV
+  double GetDeltaPt() const
+  {
+    ROOT::Math::XYZVector deltaPt_vec = GetDeltaPtVec();
+    //std::cout << "delta Pt RECO: " << sqrt(deltaPt_vec.Mag2()) << std::endl;
+    return sqrt(deltaPt_vec.Mag2()); 
+  }
+
+  //Returns a root XYZVector object containing the lepton (muon for my CCQEnu study -- Ziggy) transverse 3 momentum
+  ROOT::Math::XYZVector GetLeptonPtVec() const{
+    std::vector<std::vector<double> > leptonP = GetVecOfVecDouble("prong_part_E");
+    ROOT::Math::XYZVector leptonP_vec(leptonP[0][0]/1000., leptonP[0][1]/1000., leptonP[0][2]/1000.);
+
+    ROOT::Math::RotationX r(-3.3 * (pi / 180.)); //This object represents a slight rotation about the x axis so that the theta we get is wrt to the beam direction and not the z axis, which points down to the ground 3.3 degrees. we can then apply r to the two vectors above
+    ROOT::Math::RotationX r2(3.3 * (pi / 180.)); //the reverse rotation to get back to lab coords (3.3 is positive now)
+
+    //perform the rotation, basically transforming to new beam based coord system
+    ROOT::Math::XYZVector leptonPt_vec = r(leptonP_vec);
+
+    //Now set z to zero in the beam frame to get only the transverse components, then rotate back
+    leptonPt_vec.SetZ(0); 
+    leptonPt_vec = r2(leptonPt_vec);
+
+    return leptonPt_vec;
+  }
+
+  //Phi_t 
+  double GetPhiT() const
+  {
+    ROOT::Math::XYZVector leptonPt_vec = GetLeptonPtVec();
+    ROOT::Math::XYZVector protonPt_vec = GetProtonPtVec();
+
+    //angle between the two vectors 
+    double numerator = ((-1*leptonPt_vec).Dot(protonPt_vec));
+    double denominator = ( sqrt(leptonPt_vec.Mag2()) * sqrt(protonPt_vec.Mag2()) );
+    double phi = std::acos(numerator/denominator);
+
+    //std::cout << "TKI phi: " << phi * 180/pi << std::endl;
+    return phi * 180/pi;  //return in degrees cause that's how I've set up my bins for now
+  }
+  
+  //Alpha_t, the TKI boosting angle. it's the angle between inverted lepton pT and delta pT
+  double GetAlphaT() const
+  {
+    ROOT::Math::XYZVector leptonPt_vec = GetLeptonPtVec();
+    ROOT::Math::XYZVector deltaPt_vec = GetDeltaPtVec();
+
+    //angle between the two vectors
+    double numerator = ((-1*leptonPt_vec).Dot(deltaPt_vec));
+    double denominator = ( sqrt(leptonPt_vec.Mag2()) * sqrt(deltaPt_vec.Mag2()) );
+    double alpha = std::acos(numerator/denominator);
+
+    //std::cout << "boosting angle alpha: " << alpha * 180/pi << std::endl;
+    return alpha * 180/pi;  //return alpha in degrees cause that's how I've set up my bins for now
+  }
+
+  double GetDeltaPtTrue() const
+  {
+    int i = GetHighestEnergySignalProtonIndex();
+    if (i > -1){
+      ROOT::Math::XYZVector leptonP_vec(GetVecElem("mc_primFSLepton", 0), GetVecElem("mc_primFSLepton", 1), GetVecElem("mc_primFSLepton", 2));
+      ROOT::Math::XYZVector protonP_vec(GetVecElem("mc_FSPartPx",i), GetVecElem("mc_FSPartPy",i), GetVecElem("mc_FSPartPz",i));
+
+      ROOT::Math::RotationX r(-3.3 * (pi / 180.)); //rotation into beam frame
+      ROOT::Math::RotationX r2(3.3 * (pi / 180.)); //rotation back into lab frame
+
+      ROOT::Math::XYZVector leptonPt_vec = r(leptonP_vec);
+      ROOT::Math::XYZVector protonPt_vec = r(protonP_vec);
+      leptonPt_vec.SetZ(0);
+      protonPt_vec.SetZ(0);
+
+      //do I need to rotate back for this? I don't think so but double check
+      ROOT::Math::XYZVector deltaPt_vec = leptonPt_vec + protonPt_vec;      
+      return sqrt(deltaPt_vec.Mag2())/1000.;
+    }
+    else {
+      return -999; //what do I return for delta pt true if no true protons?
+    }
+  }
+
+  double GetAlphaTTrue() const
+  {
+    int i = GetHighestEnergySignalProtonIndex();
+    if (i > -1)
+    {
+      ROOT::Math::XYZVector leptonP_vec(GetVecElem("mc_primFSLepton", 0), GetVecElem("mc_primFSLepton", 1), GetVecElem("mc_primFSLepton", 2));
+      ROOT::Math::XYZVector protonP_vec(GetVecElem("mc_FSPartPx",i), GetVecElem("mc_FSPartPy",i), GetVecElem("mc_FSPartPz",i));
+
+      ROOT::Math::RotationX r(-3.3 * (pi / 180.)); //rotation into beam frame
+      ROOT::Math::RotationX r2(3.3 * (pi / 180.)); //rotation back into lab frame
+      
+      ROOT::Math::XYZVector leptonPt_vec = r(leptonP_vec);
+      ROOT::Math::XYZVector protonPt_vec = r(protonP_vec);
+      leptonPt_vec.SetZ(0);
+      protonPt_vec.SetZ(0);
+
+      //Still in beam frame
+      ROOT::Math::XYZVector deltaPt_vec = leptonPt_vec + protonPt_vec;
+
+      double numerator = ((-1*leptonPt_vec).Dot(deltaPt_vec));
+      double denominator = ( sqrt(leptonPt_vec.Mag2()) * sqrt(deltaPt_vec.Mag2()) );
+      double alpha = std::acos(numerator/denominator);
+      
+      return alpha * 180/pi;
+    }
+    else
+    {
+      return -999;
+    }
+  }
+
+  double GetPhiTTrue() const
+  {
+    int i = GetHighestEnergySignalProtonIndex();
+    if (i > -1)
+    {
+      ROOT::Math::XYZVector leptonP_vec(GetVecElem("mc_primFSLepton", 0), GetVecElem("mc_primFSLepton", 1), GetVecElem("mc_primFSLepton", 2));
+      ROOT::Math::XYZVector protonP_vec(GetVecElem("mc_FSPartPx",i), GetVecElem("mc_FSPartPy",i), GetVecElem("mc_FSPartPz",i));
+
+      ROOT::Math::RotationX r(-3.3 * (pi / 180.)); //rotation into beam frame
+      ROOT::Math::RotationX r2(3.3 * (pi / 180.)); //rotation back into lab frame
+      
+      ROOT::Math::XYZVector leptonPt_vec = r(leptonP_vec);
+      ROOT::Math::XYZVector protonPt_vec = r(protonP_vec);
+      leptonPt_vec.SetZ(0);
+      protonPt_vec.SetZ(0);
+
+      double numerator = ((-1*leptonPt_vec).Dot(protonPt_vec));
+      double denominator = ( sqrt(leptonPt_vec.Mag2()) * sqrt(protonPt_vec.Mag2()) );
+      double phi = std::acos(numerator/denominator);
+      
+      return phi * 180/pi;
+    }
+    else
+    {
+      return -999;
+    }
   }
 
   //============================================================================

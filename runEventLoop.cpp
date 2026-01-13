@@ -57,6 +57,7 @@ enum ErrorCodes
 #include "cuts/SignalDefinition.h"
 #include "cuts/q3RecoCut.h"
 #include "studies/Study.h"
+//#include "Binning.h" //TODO: Fix me
 
 //PlotUtils includes
 #include "PlotUtils/makeChainWrapper.h"
@@ -143,7 +144,14 @@ void LoopAndFillEventSelection(
           for(auto& var: vars)
           {
             //Cross section components
+            var->efficiencyNumerator->FillUniverse(universe, var->GetTrueValue(*universe), weight);
+            var->migration->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weight);
             var->selectedSignalReco->FillUniverse(universe, var->GetRecoValue(*universe), weight); //Efficiency numerator in reco variables.  Useful for warping studies.
+          }
+
+          for(auto& var: vars2D)
+          {
+            var->efficiencyNumerator->FillUniverse(universe, var->GetTrueValueX(*universe), var->GetTrueValueY(*universe), weight);
           }
         }
         else
@@ -153,6 +161,7 @@ void LoopAndFillEventSelection(
           else bkgd_ID=1;
 
           for(auto& var: vars) (*var->m_backgroundHists)[bkgd_ID].FillUniverse(universe, var->GetRecoValue(*universe), weight);
+          for(auto& var: vars2D) (*var->m_backgroundHists)[bkgd_ID].FillUniverse(universe, var->GetRecoValueX(*universe), var->GetRecoValueY(*universe), weight);
         }
       } // End band's universe loop
     } // End Band loop
@@ -181,7 +190,12 @@ void LoopAndFillData( PlotUtils::ChainWrapper* data,
 
       for(auto& var: vars)
       {
-        //TODO: Loop over data
+        var->dataHist->FillUniverse(universe, var->GetRecoValue(*universe, myevent.m_idx), 1);
+      }
+
+      for(auto& var: vars2D)
+      {
+        var->dataHist->FillUniverse(universe, var->GetRecoValueX(*universe), var->GetRecoValueY(*universe), 1);
       }
     }
   }
@@ -198,7 +212,7 @@ void LoopAndFillEffDenom( PlotUtils::ChainWrapper* truth,
   assert(!truth_bands["cv"].empty() && "\"cv\" error band is empty!  Could not set Model entry.");
   auto& cvUniv = truth_bands["cv"].front();
 
-  std::cout << "Starting Truth tree loop...\n";
+  std::cout << "Starting efficiency denominator loop...\n";
   const int nEntries = truth->GetEntries();
   for (int i=0; i<nEntries; ++i)
   {
@@ -225,14 +239,20 @@ void LoopAndFillEffDenom( PlotUtils::ChainWrapper* truth,
         if (!michelcuts.isEfficiencyDenom(*universe, cvWeight)) continue; //Weight is ignored for isEfficiencyDenom() in all but the CV universe 
         const double weight = model.GetWeight(*universe, myevent); //Only calculate the weight for events that will use it
 
+        //Fill efficiency denominator now: 
         for(auto var: vars)
         {
-          //TODO: Loop over the Truth tree
+          var->efficiencyDenominator->FillUniverse(universe, var->GetTrueValue(*universe), weight);
+        }
+
+        for(auto var: vars2D)
+        {
+          var->efficiencyDenominator->FillUniverse(universe, var->GetTrueValueX(*universe), var->GetTrueValueY(*universe), weight);
         }
       }
     }
   }
-  std::cout << "Finished Truth tree loop.\n";
+  std::cout << "Finished efficiency denominator loop.\n";
 }
 
 //Returns false if recoTreeName could not be inferred
@@ -251,7 +271,7 @@ bool inferRecoTreeNameAndCheckTreeNames(const std::string& mcPlaylistName, const
     return false;
   }
 
-  //Does the MC playlist have the Truth tree?
+  //Does the MC playlist have the Truth tree?  This is needed for the efficiency denominator.
   const auto truthTree = testFile->Get("Truth");
   if(truthTree == nullptr || !truthTree->IsA()->InheritsFrom(TClass::GetClass("TTree")))
   {
@@ -312,6 +332,7 @@ int main(const int argc, const char** argv)
   //One playlist must contain only MC files, and the other must contain only data files.
   //Only checking the first file in each playlist because opening each file an extra time
   //remotely (e.g. through xrootd) can get expensive.
+  //TODO: Look in INSTALL_DIR if files not found?
   const std::string mc_file_list = argv[2],
                     data_file_list = argv[1];
 
@@ -331,7 +352,7 @@ int main(const int argc, const char** argv)
 
   // You're required to make some decisions
   PlotUtils::MinervaUniverse::SetNuEConstraint(true);
-  PlotUtils::MinervaUniverse::SetPlaylist(options.m_plist_string);
+  PlotUtils::MinervaUniverse::SetPlaylist(options.m_plist_string); //TODO: Infer this from the files somehow?
   PlotUtils::MinervaUniverse::SetAnalysisNuPDG(14);
   PlotUtils::MinervaUniverse::SetNFluxUniverses(100);
   PlotUtils::MinervaUniverse::SetZExpansionFaReweight(false);
@@ -450,7 +471,7 @@ int main(const int argc, const char** argv)
     std::cerr << "Detected that tree name is CCQENu.  Making validation histograms.\n";
     vars.push_back(new Variable("pzmu", "p_{||, #mu} [GeV/c]", dansPzBins, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue));
     vars.push_back(new Variable("Emu", "E_{#mu} [GeV]", robsEmuBins, &CVUniverse::GetEmuGeV, &CVUniverse::GetElepTrueGeV));
-    vars.push_back(new Variable("Erecoil", "E_{recoil}", robsRecoilBins, &CVUniverse::GetRecoilE, &CVUniverse::Getq0True));
+    vars.push_back(new Variable("Erecoil", "E_{recoil}", robsRecoilBins, &CVUniverse::GetRecoilE, &CVUniverse::Getq0True)); //TODO: q0 is not the same as recoil energy without a spline correction
     vars2D.push_back(new Variable2D(*vars[1], *vars[0]));
   }
 
@@ -506,8 +527,7 @@ int main(const int argc, const char** argv)
     for(const auto& var: vars)
     {
       //Flux integral only if systematics are being done (temporary solution)
-      //TODO: Turn flux integral back on
-      //util::GetFluxIntegral(*error_bands["cv"].front(), var->efficiencyNumerator->hist)->Write((var->GetName() + "_reweightedflux_integrated").c_str());
+      util::GetFluxIntegral(*error_bands["cv"].front(), var->efficiencyNumerator->hist)->Write((var->GetName() + "_reweightedflux_integrated").c_str());
       //Always use MC number of nucleons for cross section
       auto nNucleons = new TParameter<double>((var->GetName() + "_fiducial_nucleons").c_str(), targetInfo.GetTrackerNNucleons(minZ, maxZ, true, apothem));
       nNucleons->Write();

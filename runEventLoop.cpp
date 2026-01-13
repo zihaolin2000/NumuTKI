@@ -379,20 +379,25 @@ int main(const int argc, const char** argv)
   // TODO: choose phase space and sidebands.
   // Will keep MuonAngle phase space constraint: < 20 deg (0.349 rad).
   // What about ZRange, Apothem, PZMuMin?
+  // Dan didn't use PZMuMin cut.
+  // We need a low energy beam binning, see this https://journals.aps.org/prd/abstract/10.1103/PhysRevD.101.092001
+  // https://arxiv.org/abs/1910.08658
+  // see supp material dpt cross-section https://journals.aps.org/prd/supplemental/10.1103/PhysRevD.101.092001
   // -- Ziggy
   phaseSpace.emplace_back(new truth::ZRange<CVUniverse>("Tracker", minZ, maxZ));
   phaseSpace.emplace_back(new truth::Apothem<CVUniverse>(apothem));
   phaseSpace.emplace_back(new truth::MuonAngle<CVUniverse>(20.));
-  phaseSpace.emplace_back(new truth::PZMuMin<CVUniverse>(1500.));
+  // phaseSpace.emplace_back(new truth::PZMuMin<CVUniverse>(1500.));
                                                                                                                                                    
   PlotUtils::Cutter<CVUniverse, MichelEvent> mycuts(std::move(preCuts), std::move(sidebands) , std::move(signalDefinition),std::move(phaseSpace));
 
   std::vector<std::unique_ptr<PlotUtils::Reweighter<CVUniverse, MichelEvent>>> MnvTunev1;
   MnvTunev1.emplace_back(new PlotUtils::FluxAndCVReweighter<CVUniverse, MichelEvent>());
-  MnvTunev1.emplace_back(new PlotUtils::GENIEReweighter<CVUniverse, MichelEvent>(true, false));
-  MnvTunev1.emplace_back(new PlotUtils::LowRecoil2p2hReweighter<CVUniverse, MichelEvent>());
+  // Turn off GENIEReweighter, LowRecoil2p2hReweighter, RPAReweighter for now -- 2026/1/12 Ziggy
+  // MnvTunev1.emplace_back(new PlotUtils::GENIEReweighter<CVUniverse, MichelEvent>(true, false));
+  // MnvTunev1.emplace_back(new PlotUtils::LowRecoil2p2hReweighter<CVUniverse, MichelEvent>());
   MnvTunev1.emplace_back(new PlotUtils::MINOSEfficiencyReweighter<CVUniverse, MichelEvent>());
-  MnvTunev1.emplace_back(new PlotUtils::RPAReweighter<CVUniverse, MichelEvent>());
+  // MnvTunev1.emplace_back(new PlotUtils::RPAReweighter<CVUniverse, MichelEvent>());
 
   PlotUtils::Model<CVUniverse, MichelEvent> model(std::move(MnvTunev1));
 

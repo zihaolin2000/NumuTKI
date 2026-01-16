@@ -359,6 +359,8 @@ int main(const int argc, const char** argv)
   PlotUtils::MinervaUniverse::SetAnalysisNuPDG(14);
   PlotUtils::MinervaUniverse::SetNFluxUniverses(100);
   PlotUtils::MinervaUniverse::SetZExpansionFaReweight(false);
+  // Set use_nonResPi_reweight true -- Ziggy
+  PlotUtils::MinervaUniverse::SetNonResPiReweight(false);
 
   PlotUtils::MinervaUniverse::RPAMaterials(true); 
 
@@ -419,9 +421,9 @@ int main(const int argc, const char** argv)
   MnvTunev1.emplace_back(new PlotUtils::FluxAndCVReweighter<CVUniverse, MichelEvent>());
   MnvTunev1.emplace_back(new PlotUtils::MINOSEfficiencyReweighter<CVUniverse, MichelEvent>());
   // Turn off GENIEReweighter, LowRecoil2p2hReweighter, RPAReweighter for now -- 2026/1/12 Ziggy
-  MnvTunev1.emplace_back(new PlotUtils::GENIEReweighter<CVUniverse, MichelEvent>(true, false));
-  MnvTunev1.emplace_back(new PlotUtils::LowRecoil2p2hReweighter<CVUniverse, MichelEvent>());
-  MnvTunev1.emplace_back(new PlotUtils::RPAReweighter<CVUniverse, MichelEvent>());
+  // MnvTunev1.emplace_back(new PlotUtils::GENIEReweighter<CVUniverse, MichelEvent>(true, false));
+  // MnvTunev1.emplace_back(new PlotUtils::LowRecoil2p2hReweighter<CVUniverse, MichelEvent>());
+  // MnvTunev1.emplace_back(new PlotUtils::RPAReweighter<CVUniverse, MichelEvent>());
 
   //CCQE-like BDT reweight -- 2026/1/15 Ziggy
   MnvTunev1.emplace_back(new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>());
@@ -457,7 +459,7 @@ int main(const int argc, const char** argv)
                         2.75e-01,  3.00e-01,  3.50e-01,  4.00e-01,  4.50e-01,  5.00e-01,
                         5.50e-01,  6.00e-01,  6.50e-01,  7.00e-01,  8.00e-01,  1.00e+00,
                         1.20e+00,  2.00e+00,  2.02e+00
-                      };
+                      }, // Got this binning from PhysRevD.101.092001 supplemental materials
                       phiAngleBins = {0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100},
                       protonAngleBins = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180},
                       robsRecoilBins;

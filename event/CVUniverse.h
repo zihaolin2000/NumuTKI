@@ -173,7 +173,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
       return 6; //others (>=3p)
   }
 
-  // Assume event already passed hasMuon cut
+  // Get truth muon index
   int GetMuonIndex() const
   {
     int index(-999);
@@ -259,7 +259,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     return r(labVec);
   }
 
-  // Get **BEAM FRAME** momentum 3-vector in GeV.
+  // Get **BEAM FRAME** truth momentum 3-vector in GeV.
   ROOT::Math::XYZVector GetParticlePVec(int index) const
   {
     if (index == -999)
@@ -353,17 +353,17 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   std::vector<double> GetReactionFrameReweightFeatures(const int category) const
   {
     std::vector<double> features = {-999, -999, -999};
-    ROOT::Math::XYZVector labPmu = GetParticlePVec(GetMuonIndex());
-    double totalTp = GetTotalProtonTp(), muonPy = - GetMuonPT(), muonPz = GetMuonPz();
+    ROOT::Math::XYZVector beamPmu = GetParticlePVec(GetMuonIndex());
+    double totalTp = GetTotalProtonTp(), muonPy = - GetMuonPTTrue()/1000, muonPz = GetMuonPzTrue()/1000; // Use truth muon PT Pz
     if (category == 0) // 0p0n
     {
-      ROOT::Math::XYZVector totalPp = ConvertToReactionFrame(GetTotalProtonPvec(), labPmu);
+      ROOT::Math::XYZVector totalPp = ConvertToReactionFrame(GetTotalProtonPvec(), beamPmu);
       features = {totalPp.X(), totalPp.Y(), totalPp.Z(), totalTp, muonPy, muonPz};
     }
     else if (category == 1) // 0pNn
     {
-      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), labPmu);
-      ROOT::Math::XYZVector totalPp = ConvertToReactionFrame(GetTotalProtonPvec(), labPmu);
+      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), beamPmu);
+      ROOT::Math::XYZVector totalPp = ConvertToReactionFrame(GetTotalProtonPvec(), beamPmu);
       features =
       {
         leadingPn.X(), leadingPn.Y(), leadingPn.Z(),
@@ -373,13 +373,13 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     }
     else if (category == 2  || category == 6) // 1p0n or others
     {
-      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(GetLeadingProtonIndex()), labPmu);
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(GetLeadingProtonIndex()), beamPmu);
       features = {leadingPp.X(), leadingPp.Y(), leadingPp.Z(), totalTp, muonPy, muonPz};
     }
     else if (category == 3) // 1pNn
     {
-      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(GetLeadingProtonIndex()), labPmu);
-      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), labPmu);
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(GetLeadingProtonIndex()), beamPmu);
+      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), beamPmu);
       features =
       {
         leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
@@ -392,8 +392,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse
       std::vector<int> ids = Get2HighestKEProtonIndices();
       int leading_i(ids[0]);
       int subleading_i(ids[1]);
-      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(leading_i), labPmu);
-      ROOT::Math::XYZVector subLeadingPp = ConvertToReactionFrame(GetParticlePVec(subleading_i), labPmu);
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(leading_i), beamPmu);
+      ROOT::Math::XYZVector subLeadingPp = ConvertToReactionFrame(GetParticlePVec(subleading_i), beamPmu);
       features =
       {
         leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
@@ -406,9 +406,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse
       std::vector<int> ids = Get2HighestKEProtonIndices();
       int leading_i(ids[0]);
       int subleading_i(ids[1]);
-      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(leading_i), labPmu);
-      ROOT::Math::XYZVector subLeadingPp = ConvertToReactionFrame(GetParticlePVec(subleading_i), labPmu);
-      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), labPmu);
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(leading_i), beamPmu);
+      ROOT::Math::XYZVector subLeadingPp = ConvertToReactionFrame(GetParticlePVec(subleading_i), beamPmu);
+      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), beamPmu);
       features =
       {
         leadingPp.X(), leadingPp.Y(), leadingPp.Z(),

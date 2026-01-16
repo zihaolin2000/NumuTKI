@@ -15,14 +15,15 @@
 #define CVUNIVERSE_H
 
 #include <iostream>
-
 #include "PlotUtils/MinervaUniverse.h"
 
 // ROOT includes
 #include "Math/RotationX.h"
 #include "Math/Vector3D.h"
+#include "Math/Vector2D.h"
 
-class CVUniverse : public PlotUtils::MinervaUniverse {
+class CVUniverse : public PlotUtils::MinervaUniverse
+{
 
   public:
   #include "PlotUtils/MuonFunctions.h" // GetMinosEfficiencyWeight
@@ -140,6 +141,285 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
     return GetInt("multiplicity");
   }
 
+  // Get CCQE-like category based on nubmer of above-threshold final state
+  // protons and neutrons.  
+  // KE thresholds in MeV.
+  int GetCCQELikeCategory(double proton_threshold, double neutron_threshold) const
+  {
+    int n_protons(0);
+    int n_neutrons(0);
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2212 && (energies[i] - M_p) >= proton_threshold)
+        n_protons++;
+      else if (FSParticles[i] == 2112 && (energies[i] - M_n) >= neutron_threshold)
+        n_neutrons++;
+    }
+    if (n_protons == 0 && n_neutrons == 0)
+      return 0; //0p0n
+    else if (n_protons == 0 && n_neutrons > 0)
+      return 1; //0pNn
+    else if (n_protons == 1 && n_neutrons == 0)
+      return 2; //1p0n
+    else if (n_protons == 1 && n_neutrons > 0)
+      return 3; //1pNn
+    else if (n_protons == 2 && n_neutrons == 0)
+      return 4; //2p0n
+    else if (n_protons == 2 && n_neutrons > 0)
+      return 5; //2pNn
+    else
+      return 6; //others (>=3p)
+  }
+
+  // Assume event already passed hasMuon cut
+  int GetMuonIndex() const
+  {
+    int index(-999);
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 13)
+      {
+          index = i;
+          break;
+      }
+    }
+    return index;
+  }
+
+  int GetLeadingProtonIndex() const
+  {
+    double leadingE(-999.0);
+    int leading_i(-999);
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2212 && energies[i] > leadingE)
+      {
+        leadingE = energies[i];
+        leading_i = i;
+      }
+    }
+    return leading_i;
+  }
+
+  int GetLeadingNeutronIndex() const
+  {
+    double leadingE(-999.0);
+    int leading_i(-999);
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2112 && energies[i] > leadingE)
+      {
+        leadingE = energies[i];
+        leading_i = i;
+      }
+    }
+    return leading_i;
+  }
+
+  std::vector<int> Get2HighestKEProtonIndices() const
+  {
+    double leadingE(-999.0);
+    double subleadingE(-9999.0);
+    int leading_i(-999);
+    int subleading_i(-999);
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2212 && energies[i] > leadingE)
+      {
+        subleading_i = leading_i;
+        subleadingE = leadingE;
+        leading_i = i;
+        leadingE = energies[i];
+      }
+      else if (FSParticles[i] == 2212 && energies[i] < leadingE && energies[i] > subleadingE)
+      {
+        subleading_i = i;
+        subleadingE = energies[i];
+      }
+    }
+    return std::vector<int>{leading_i, subleading_i};
+  }
+
+  // Helper function to convert from lab frame to beam frame.
+  // Beam points into earth by 3.3 degree, so momentum P in beam frame is given by:
+  // rotating lab frame P by -3.3 degree around positive x-axis.
+  // Neutrino direction is [0, 0, 1] in beam frame.
+  ROOT::Math::XYZVector ConvertToBeamFrame(ROOT::Math::XYZVector labVec) const
+  {
+    ROOT::Math::RotationX r(-3.3 * (pi / 180.));
+    return r(labVec);
+  }
+
+  // Get **BEAM FRAME** momentum 3-vector in GeV.
+  ROOT::Math::XYZVector GetParticlePVec(int index) const
+  {
+    if (index == -999)
+      return ROOT::Math::XYZVector(-999.0, -999.0, -999.0);
+    else
+    {  
+      ROOT::Math::XYZVector labP(GetVecElem("mc_FSPartPx", index)/1000, GetVecElem("mc_FSPartPy", index)/1000, GetVecElem("mc_FSPartPz", index)/1000);
+      return ConvertToBeamFrame(labP);
+    }
+  }
+
+  ROOT::Math::XYZVector ConvertToReactionFrame(const ROOT::Math::XYZVector beam_Pp, const ROOT::Math::XYZVector beam_Pmu) const
+  {
+    // treat muon transverse direction as transverse plane y vector
+    ROOT::Math::XYVector plane_Pp(beam_Pp.X(), beam_Pp.Y());
+    ROOT::Math::XYVector plane_y(- beam_Pmu.X(), - beam_Pmu.Y());
+    // Normalize y vector
+    plane_y = plane_y.Unit();
+    // x vector is simply y vector rotated clockwise by 90
+    ROOT::Math::XYVector plane_x(- plane_y.Y(), plane_y.X());
+    double new_px = plane_Pp.Dot(plane_x);
+    double new_py = plane_Pp.Dot(plane_y);
+    return ROOT::Math::XYZVector(new_px, new_py, beam_Pp.Z());
+  }
+
+  // Get *BEAM FRAME* momentum 3-vector in GeV.
+  ROOT::Math::XYZVector GetTotalProtonPvec() const
+  {
+    ROOT::Math::XYZVector totalP(0.0, 0.0, 0.0);
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2212)
+      {
+        ROOT::Math::XYZVector protonP = GetParticlePVec(i);
+        totalP += protonP;
+      }
+    }
+    return totalP;
+  }
+
+  // Get *BEAM FRAME* momentum 3-vector in GeV.
+  ROOT::Math::XYZVector GetTotalNeutronPvec() const
+  {
+    ROOT::Math::XYZVector totalP(0.0, 0.0, 0.0);
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2112)
+      {
+        ROOT::Math::XYZVector neutronP = GetParticlePVec(i);
+        totalP += neutronP;
+      }
+    }
+    return totalP;
+  
+  }
+
+  // Get *BEAM FRAME* momentum 3-vector in GeV.
+  double GetTotalProtonTp() const
+  {
+    double totalTp(0.0);
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2212)
+        totalTp += (energies[i] - M_p)/1000;
+    }
+    return totalTp;
+    
+  }
+
+  // Get *BEAM FRAME* momentum 3-vector in GeV.
+  double GetTotalNeutronTn() const
+  {
+    double totalTn(0.0);
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2112)
+        totalTn += (energies[i] - M_n)/1000;
+    }
+    return totalTn;
+  
+  }
+
+  // Get features for CCQELikeBDTReweighter to predict weight of an event.
+  // Return a vector of values of reweight variables.
+  std::vector<double> GetReactionFrameReweightFeatures(const int category) const
+  {
+    std::vector<double> features = {-999, -999, -999};
+    ROOT::Math::XYZVector labPmu = GetParticlePVec(GetMuonIndex());
+    double totalTp = GetTotalProtonTp(), muonPy = - GetMuonPT(), muonPz = GetMuonPz();
+    if (category == 0) // 0p0n
+    {
+      ROOT::Math::XYZVector totalPp = ConvertToReactionFrame(GetTotalProtonPvec(), labPmu);
+      features = {totalPp.X(), totalPp.Y(), totalPp.Z(), totalTp, muonPy, muonPz};
+    }
+    else if (category == 1) // 0pNn
+    {
+      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), labPmu);
+      ROOT::Math::XYZVector totalPp = ConvertToReactionFrame(GetTotalProtonPvec(), labPmu);
+      features =
+      {
+        leadingPn.X(), leadingPn.Y(), leadingPn.Z(),
+        totalPp.X(), totalPp.Y(), totalPp.Z(),
+        totalTp, muonPy, muonPz
+      };
+    }
+    else if (category == 2  || category == 6) // 1p0n or others
+    {
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(GetLeadingProtonIndex()), labPmu);
+      features = {leadingPp.X(), leadingPp.Y(), leadingPp.Z(), totalTp, muonPy, muonPz};
+    }
+    else if (category == 3) // 1pNn
+    {
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(GetLeadingProtonIndex()), labPmu);
+      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), labPmu);
+      features =
+      {
+        leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
+        totalTp, muonPy, muonPz,
+        leadingPn.X(), leadingPn.Y(), leadingPn.Z()
+      };
+    }
+    else if (category == 4) // 2p0n
+    {
+      std::vector<int> ids = Get2HighestKEProtonIndices();
+      int leading_i(ids[0]);
+      int subleading_i(ids[1]);
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(leading_i), labPmu);
+      ROOT::Math::XYZVector subLeadingPp = ConvertToReactionFrame(GetParticlePVec(subleading_i), labPmu);
+      features =
+      {
+        leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
+        totalTp, muonPy, muonPz,
+        subLeadingPp.X(), subLeadingPp.Y(), subLeadingPp.Z()
+      };
+    }
+    else if (category == 5) // 2pNn
+    {
+      std::vector<int> ids = Get2HighestKEProtonIndices();
+      int leading_i(ids[0]);
+      int subleading_i(ids[1]);
+      ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(leading_i), labPmu);
+      ROOT::Math::XYZVector subLeadingPp = ConvertToReactionFrame(GetParticlePVec(subleading_i), labPmu);
+      ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), labPmu);
+      features =
+      {
+        leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
+        totalTp, muonPy, muonPz,
+        leadingPn.X(), leadingPn.Y(), leadingPn.Z(),
+        subLeadingPp.X(), subLeadingPp.Y(), subLeadingPp.Z()
+      };
+    }
+    return features;
+  }
+
   // Following functions are copied from Carlos's NuETKI/event/CVUniverse.h.
   // Change Carlos's electron naming to lepton.
   // -- Ziggy
@@ -161,7 +441,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
     //fs particle energies in MeV
     std::vector<double> energies = GetVecDouble("mc_FSPartE");
-    for (int i = 0; i < FSParticles.size(); i++){
+    for (size_t i = 0; i < FSParticles.size(); i++){
       //So I can choose to count any protons, or only protons above our reco threshold. 
       //if (FSParticles[i] == 2212){
       if (FSParticles[i] == 2212 && energies[i] > highestEnergy){
@@ -172,7 +452,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
         ROOT::Math::RotationX r(-3.3 * (pi / 180.));
         double protonTheta = (r(p)).Theta()*(180/pi); //in degrees
         //if (protonP>450 && protonP<1200 && protonTheta<70){
-        if (protonP>450 && protonP<1200 && (protonTheta<70 || protonTheta>110)){ //Testing allowing backwards protons??
+        if (protonP>450 && protonP<1200 && (protonTheta<70 || protonTheta>110))
+        { //Testing allowing backwards protons??
           highestEnergy = energies[i];
           index = i;
         }
@@ -186,7 +467,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   {
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
     bool hasMeson = false;
-    for (int i = 0; i < FSParticles.size(); i++)
+    for (size_t i = 0; i < FSParticles.size(); i++)
     {
       //std::cout << "final state particle: " << i << ": " << FSParticles[i] << std::endl;
       if (abs(FSParticles[i]) == 211 || abs(FSParticles[i]) == 321 || abs(FSParticles[i]) == 311 || abs(FSParticles[i]) == 130 || abs(FSParticles[i]) == 111)
@@ -203,7 +484,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
     std::vector<double> energies = GetVecDouble("mc_FSPartE");
     bool hasPhoton = false;
-    for (int i = 0; i < FSParticles.size(); i++)
+    for (size_t i = 0; i < FSParticles.size(); i++)
     {
       //std::cout << "final state particle: " << i << ": " << FSParticles[i] << std::endl;
       if (abs(FSParticles[i]) == 22 && energies[i] > 10)
@@ -216,7 +497,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   }
 
   //Returns a root XYZVector object containing the lepton (muon for my CCQEnu study -- Ziggy) transverse 3 momentum
-  ROOT::Math::XYZVector GetProtonPtVec() const{
+  ROOT::Math::XYZVector GetProtonPtVec() const
+  {
     ROOT::Math::XYZVector protonP_vec(GetDouble("MasterAnaDev_proton_Px_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Py_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Pz_fromdEdx")/1000.);
     ROOT::Math::RotationX r(-3.3 * (pi / 180.)); 
     ROOT::Math::RotationX r2(3.3 * (pi / 180.));
@@ -232,7 +514,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   //and the lepton (muon for my CCQEnu study -- Ziggy) transverse 3 momentum
   //which is then used to calculate TKI variables
   //Remember: z direction != beam direction so transverse doesn't exactly mean z components are zero, although they should be small
-  ROOT::Math::XYZVector GetDeltaPtVec() const{
+  ROOT::Math::XYZVector GetDeltaPtVec() const
+  {
     ROOT::Math::XYZVector leptonPt_vec = GetLeptonPtVec();
     ROOT::Math::XYZVector protonPt_vec = GetProtonPtVec();
         
@@ -256,7 +539,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   }
 
   //Returns a root XYZVector object containing the lepton (muon for my CCQEnu study -- Ziggy) transverse 3 momentum
-  ROOT::Math::XYZVector GetLeptonPtVec() const{
+  ROOT::Math::XYZVector GetLeptonPtVec() const
+  {
     std::vector<std::vector<double> > leptonP = GetVecOfVecDouble("prong_part_E");
     ROOT::Math::XYZVector leptonP_vec(leptonP[0][0]/1000., leptonP[0][1]/1000., leptonP[0][2]/1000.);
 
@@ -455,7 +739,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
     return result;
   }
 
-  virtual int GetTDead() const {
+  virtual int GetTDead() const
+  {
     return GetInt("phys_n_dead_discr_pair_upstream_prim_track_proj");
   }
   
@@ -464,20 +749,24 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
   //      so that we get the right neutrino energy in an inclusive sample.  So,
   //      this function could be correcting for neutron energy which Eavail should
   //      not do.
-  virtual double GetEavail() const {
+  virtual double GetEavail() const
+  {
     return GetDouble("recoilE_SplineCorrected");
   }
   
-  virtual double GetQ2Reco() const{
+  virtual double GetQ2Reco() const
+  {
     return GetDouble("qsquared_recoil");
   }
 
   //GetRecoilE is designed to match the NSF validation suite
-  virtual double GetRecoilE() const {
+  virtual double GetRecoilE() const
+  {
     return GetVecElem("recoil_summed_energy", 0);
   }
   
-  virtual double Getq3() const{
+  virtual double Getq3() const
+  {
     double eavail = GetEavail()/pow(10,3);
     double q2 = GetQ2Reco() / pow(10,6);
     double q3mec = sqrt(eavail*eavail + q2);
@@ -488,29 +777,35 @@ class CVUniverse : public PlotUtils::MinervaUniverse {
 
   virtual int GetTruthNuPDG() const { return GetInt("mc_incoming"); }
 
-  virtual double GetMuonQP() const {
+  virtual double GetMuonQP() const
+  {
     return GetDouble((GetAnaToolName() + "_minos_trk_qp").c_str());
   }
 
   //Some functions to match CCQENuInclusive treatment of DIS weighting. Name matches same Dan area as before.
-  virtual double GetTrueExperimentersQ2() const {
+  virtual double GetTrueExperimentersQ2() const
+  {
     double Enu = GetEnuTrue(); //MeV
     double Emu = GetElepTrue(); //MeV
     double thetaMu = GetThetalepTrue();
     return 4.0*Enu*Emu*pow(sin(thetaMu/2.0),2.0);//MeV^2
   }
 
-  virtual double CalcTrueExperimentersQ2(double Enu, double Emu, double thetaMu) const{
+  virtual double CalcTrueExperimentersQ2(double Enu, double Emu, double thetaMu) const
+  {
     return 4.0*Enu*Emu*pow(sin(thetaMu/2.0),2.0);//MeV^2
   }
 
-  virtual double GetTrueExperimentersW() const {
+  virtual double GetTrueExperimentersW() const
+  {
     double nuclMass = M_nucleon;
     int struckNucl = GetTargetNucleon();
-    if (struckNucl == PDG_n){
+    if (struckNucl == PDG_n)
+    {
       nuclMass=M_n;
     }
-    else if (struckNucl == PDG_p){
+    else if (struckNucl == PDG_p)
+    {
       nuclMass=M_p;
     }
     double Enu = GetEnuTrue();

@@ -82,6 +82,9 @@ enum ErrorCodes
 #include "PlotUtils/TargetUtils.h"
 #pragma GCC diagnostic pop
 
+// CCQELikeBDTReweighter includes -- Ziggy
+#include "bdtreweight/CCQELikeBDTReweighter.h"
+
 //ROOT includes
 #include "TParameter.h"
 
@@ -414,11 +417,14 @@ int main(const int argc, const char** argv)
 
   std::vector<std::unique_ptr<PlotUtils::Reweighter<CVUniverse, MichelEvent>>> MnvTunev1;
   MnvTunev1.emplace_back(new PlotUtils::FluxAndCVReweighter<CVUniverse, MichelEvent>());
-  // Turn off GENIEReweighter, LowRecoil2p2hReweighter, RPAReweighter for now -- 2026/1/12 Ziggy
-  // MnvTunev1.emplace_back(new PlotUtils::GENIEReweighter<CVUniverse, MichelEvent>(true, false));
-  // MnvTunev1.emplace_back(new PlotUtils::LowRecoil2p2hReweighter<CVUniverse, MichelEvent>());
   MnvTunev1.emplace_back(new PlotUtils::MINOSEfficiencyReweighter<CVUniverse, MichelEvent>());
-  // MnvTunev1.emplace_back(new PlotUtils::RPAReweighter<CVUniverse, MichelEvent>());
+  // Turn off GENIEReweighter, LowRecoil2p2hReweighter, RPAReweighter for now -- 2026/1/12 Ziggy
+  MnvTunev1.emplace_back(new PlotUtils::GENIEReweighter<CVUniverse, MichelEvent>(true, false));
+  MnvTunev1.emplace_back(new PlotUtils::LowRecoil2p2hReweighter<CVUniverse, MichelEvent>());
+  MnvTunev1.emplace_back(new PlotUtils::RPAReweighter<CVUniverse, MichelEvent>());
+
+  //CCQE-like BDT reweight -- 2026/1/15 Ziggy
+  MnvTunev1.emplace_back(new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>());
 
   PlotUtils::Model<CVUniverse, MichelEvent> model(std::move(MnvTunev1));
 
@@ -445,7 +451,13 @@ int main(const int argc, const char** argv)
                       dansPzBins = {1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15, 20, 40, 60},
                       robsEmuBins = {0,1,2,3,4,5,7,9,12,15,18,22,36,50,75,100,120},
                       // CCQEnu TKI bins -- Ziggy
-                      deltaPt_bins = {0, 0.2, 0.4, 0.6, 1, 1.5, 3},
+                      deltaPt_bins = {
+                        -1.00e-03,  0.00e+00,  2.50e-02,  5.00e-02,  7.50e-02,  1.00e-01,
+                        1.25e-01,  1.50e-01,  1.75e-01,  2.00e-01,  2.25e-01,  2.50e-01,
+                        2.75e-01,  3.00e-01,  3.50e-01,  4.00e-01,  4.50e-01,  5.00e-01,
+                        5.50e-01,  6.00e-01,  6.50e-01,  7.00e-01,  8.00e-01,  1.00e+00,
+                        1.20e+00,  2.00e+00,  2.02e+00
+                      };
                       phiAngleBins = {0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100},
                       protonAngleBins = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180},
                       robsRecoilBins;

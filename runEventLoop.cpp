@@ -359,7 +359,7 @@ int main(const int argc, const char** argv)
   PlotUtils::MinervaUniverse::SetAnalysisNuPDG(14);
   PlotUtils::MinervaUniverse::SetNFluxUniverses(100);
   PlotUtils::MinervaUniverse::SetZExpansionFaReweight(false);
-  // Set use_nonResPi_reweight true -- Ziggy
+  // Set use_nonResPi_reweight false -- 2026/1/16 Ziggy
   PlotUtils::MinervaUniverse::SetNonResPiReweight(false);
 
   PlotUtils::MinervaUniverse::RPAMaterials(true); 

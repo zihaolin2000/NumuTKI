@@ -83,8 +83,8 @@ enum ErrorCodes
 #pragma GCC diagnostic pop
 
 // CCQELikeBDTReweighter includes -- Ziggy
-#include "bdtreweight/CCQELikeBDTReweighter.h"
-#include "bdtreweight/ElasticFSIReweighter.h" // Elastic FSI bug events reweight -- Ziggy 
+#include "reweight/CCQELikeBDTReweighter.h"
+#include "reweight/ElasticFSIReweighter.h" // Elastic FSI bug events reweight -- Ziggy 
 
 //ROOT includes
 #include "TParameter.h"

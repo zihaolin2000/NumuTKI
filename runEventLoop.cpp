@@ -84,6 +84,7 @@ enum ErrorCodes
 
 // CCQELikeBDTReweighter includes -- Ziggy
 #include "bdtreweight/CCQELikeBDTReweighter.h"
+#include "bdtreweight/ElasticFSIReweighter.h" // Elastic FSI bug events reweight -- Ziggy 
 
 //ROOT includes
 #include "TParameter.h"
@@ -381,7 +382,7 @@ int main(const int argc, const char** argv)
 
   const double minZ = 5980, maxZ = 8422, apothem = 1100; // Dan uses apothem = 1100. -- Ziggy
   
-  // Add Dan's CCQEnu selection cuts
+  // Add Dan's CCQEnu selection reco cuts
   // -- Ziggy
   preCuts.emplace_back(new reco::PassInteractionVertexCut<CVUniverse, MichelEvent>());
   preCuts.emplace_back(new reco::PassDeadTimeCut<CVUniverse, MichelEvent>());
@@ -394,11 +395,13 @@ int main(const int argc, const char** argv)
   preCuts.emplace_back(new reco::PassProtonContainmentCut<CVUniverse, MichelEvent>(apothem)); // Pass apothem value 1100.0. -- Ziggy
   preCuts.emplace_back(new reco::PassHybridProtonNodeCut<CVUniverse, MichelEvent>(10.0)); // Pass cutval 10.0. -- Ziggy
   
-  // Add CCQE-like Numu signal definition
-  // - Ziggy
+  // Add CCQE-like Numu signal definition truth cuts
+  // -- Ziggy
   signalDefinition.emplace_back(new truth::IsNeutrino<CVUniverse>());
   signalDefinition.emplace_back(new truth::IsCC<CVUniverse>());
-  signalDefinition.emplace_back(new truth::HasSignalProton<CVUniverse>());
+  // signalDefinition.emplace_back(new truth::HasSignalProton<CVUniverse>());
+  // signalDefinition.emplace_back(new truth::HasAbove50MeVProton<CVUniverse>());// Use my >=50 MeV definition instead -- Ziggy
+  signalDefinition.emplace_back(new truth::Is1p0nTopology<CVUniverse>()); // 1p0n selection -- Ziggy
   signalDefinition.emplace_back(new truth::HasNoMeson<CVUniverse>());
   signalDefinition.emplace_back(new truth::HasNoPhoton<CVUniverse>());
                                                                                                                                                    
@@ -412,7 +415,7 @@ int main(const int argc, const char** argv)
   // -- Ziggy
   phaseSpace.emplace_back(new truth::ZRange<CVUniverse>("Tracker", minZ, maxZ));
   phaseSpace.emplace_back(new truth::Apothem<CVUniverse>(apothem));
-  phaseSpace.emplace_back(new truth::MuonAngle<CVUniverse>(20.));
+  // phaseSpace.emplace_back(new truth::MuonAngle<CVUniverse>(20.)); // Turn off muon angle cut for now -- 2026/1/20 Ziggy
   // phaseSpace.emplace_back(new truth::PZMuMin<CVUniverse>(1500.));
                                                                                                                                                    
   PlotUtils::Cutter<CVUniverse, MichelEvent> mycuts(std::move(preCuts), std::move(sidebands) , std::move(signalDefinition),std::move(phaseSpace));
@@ -425,8 +428,10 @@ int main(const int argc, const char** argv)
   // MnvTunev1.emplace_back(new PlotUtils::LowRecoil2p2hReweighter<CVUniverse, MichelEvent>());
   // MnvTunev1.emplace_back(new PlotUtils::RPAReweighter<CVUniverse, MichelEvent>());
 
-  //CCQE-like BDT reweight -- 2026/1/15 Ziggy
-  MnvTunev1.emplace_back(new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>());
+  // Reweight elastic FSI bug events to 0.0 -- 2026/1/26 Ziggy
+  MnvTunev1.emplace_back(new PlotUtils::ElasticFSIReweighter<CVUniverse, MichelEvent>());
+  // CCQE-like BDT reweight -- 2026/1/15 Ziggy
+  // MnvTunev1.emplace_back(new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>());
 
   PlotUtils::Model<CVUniverse, MichelEvent> model(std::move(MnvTunev1));
 
@@ -453,7 +458,7 @@ int main(const int argc, const char** argv)
                       dansPzBins = {1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15, 20, 40, 60},
                       robsEmuBins = {0,1,2,3,4,5,7,9,12,15,18,22,36,50,75,100,120},
                       // CCQEnu TKI bins -- Ziggy
-                      deltaPt_bins = {
+                      tejin_dptBins = {
                         -1.00e-03,  0.00e+00,  2.50e-02,  5.00e-02,  7.50e-02,  1.00e-01,
                         1.25e-01,  1.50e-01,  1.75e-01,  2.00e-01,  2.25e-01,  2.50e-01,
                         2.75e-01,  3.00e-01,  3.50e-01,  4.00e-01,  4.50e-01,  5.00e-01,
@@ -471,12 +476,22 @@ int main(const int argc, const char** argv)
   {
     new Variable("pTmu", "p_{T, #mu} [GeV/c]", dansPTBins, &CVUniverse::GetMuonPT, &CVUniverse::GetMuonPTTrue),
     // Get CCQEnu TKI variables here -- Ziggy
+    // TODO:: reco sum Tp in CVUniverse
     new Variable("pzmu", "p_{||, #mu} [GeV/c]", dansPzBins, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
     new Variable("Erecoil", "E_{recoil}", robsRecoilBins, &CVUniverse::GetRecoilE, &CVUniverse::Getq0True),
     new Variable("Emu", "E_{#mu} [GeV]", robsEmuBins, &CVUniverse::GetEmuGeV, &CVUniverse::GetElepTrueGeV),
-    new Variable("DeltaPt", "#deltaP_{T} [GeV/c]", deltaPt_bins, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    new Variable("DeltaPt", "#deltaP_{T} [GeV/c]", tejin_dptBins, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
     new Variable("AlphaPt", "#delta#alpha_{T} [deg]", protonAngleBins, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
     new Variable("PhiPt", "#delta#phi_{T} [deg]", phiAngleBins, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+    new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+    new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+    new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.5, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+    new Variable("muon pT", "p_{T, #mu} [GeV/c]", 30, 0, 1.8, &CVUniverse::GetMuonPT, &CVUniverse::GetMuonPTTrue),
+    new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+    new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 3, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+    new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.6, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+    new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue)
   };
 
   std::vector<Variable2D*> vars2D;

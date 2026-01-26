@@ -21,6 +21,7 @@
 #include "Math/RotationX.h"
 #include "Math/Vector3D.h"
 #include "Math/Vector2D.h"
+#include "TMath.h"
 
 class CVUniverse : public PlotUtils::MinervaUniverse
 {
@@ -131,7 +132,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     return GetDouble((GetAnaToolName()+"_Q2_CCQE").c_str());
   }
 
-  double GetMuonTheta() const
+  double GetMuonTheta() const // reco
   {
     return GetThetamu();
   }
@@ -139,6 +140,11 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   double GetMultiplicity() const
   {
     return GetInt("multiplicity");
+  }
+
+  double GetCCQELikeTotalTpReco() const // reco, GeV
+  {
+    return GetDouble("recoil_energy_nonmuon_nonvtx0mm")/1000;
   }
 
   // Get CCQE-like category based on nubmer of above-threshold final state
@@ -260,7 +266,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   }
 
   // Get **BEAM FRAME** truth momentum 3-vector in GeV.
-  ROOT::Math::XYZVector GetParticlePVec(int index) const
+  ROOT::Math::XYZVector GetParticlePVec(int index) const // truth
   {
     if (index == -999)
       return ROOT::Math::XYZVector(-999.0, -999.0, -999.0);
@@ -271,6 +277,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     }
   }
 
+  // Convert beam frame particle p vec to reaction frame given beam frame muon p vec
   ROOT::Math::XYZVector ConvertToReactionFrame(const ROOT::Math::XYZVector beam_Pp, const ROOT::Math::XYZVector beam_Pmu) const
   {
     // treat muon transverse direction as transverse plane y vector
@@ -286,7 +293,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   }
 
   // Get *BEAM FRAME* momentum 3-vector in GeV.
-  ROOT::Math::XYZVector GetTotalProtonPvec() const
+  ROOT::Math::XYZVector GetTotalProtonPvec() const // truth
   {
     ROOT::Math::XYZVector totalP(0.0, 0.0, 0.0);
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
@@ -302,7 +309,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   }
 
   // Get *BEAM FRAME* momentum 3-vector in GeV.
-  ROOT::Math::XYZVector GetTotalNeutronPvec() const
+  ROOT::Math::XYZVector GetTotalNeutronPvec() const // truth
   {
     ROOT::Math::XYZVector totalP(0.0, 0.0, 0.0);
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
@@ -318,8 +325,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   
   }
 
-  // Get *BEAM FRAME* momentum 3-vector in GeV.
-  double GetTotalProtonTp() const
+  double GetTotalProtonTp() const // truth, GeV
   {
     double totalTp(0.0);
     std::vector<double> energies = GetVecDouble("mc_FSPartE");
@@ -330,11 +336,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse
         totalTp += (energies[i] - M_p)/1000;
     }
     return totalTp;
-    
   }
 
-  // Get *BEAM FRAME* momentum 3-vector in GeV.
-  double GetTotalNeutronTn() const
+  double GetTotalNeutronTn() const // truth, GeV
   {
     double totalTn(0.0);
     std::vector<double> energies = GetVecDouble("mc_FSPartE");
@@ -345,7 +349,6 @@ class CVUniverse : public PlotUtils::MinervaUniverse
         totalTn += (energies[i] - M_n)/1000;
     }
     return totalTn;
-  
   }
 
   // Get features for CCQELikeBDTReweighter to predict weight of an event.
@@ -418,6 +421,244 @@ class CVUniverse : public PlotUtils::MinervaUniverse
       };
     }
     return features;
+  }
+
+  ROOT::Math::XYZVector GetLeadingProtonReactionFramePvecTrue() const
+  {
+    ROOT::Math::XYZVector muonP = GetParticlePVec(GetMuonIndex());
+    ROOT::Math::XYZVector protonP = GetParticlePVec(GetLeadingProtonIndex());
+    return ConvertToReactionFrame(protonP, muonP);
+  }
+
+  double GetLeadingProtonReactionFramePxTrue() const
+  {
+    return GetLeadingProtonReactionFramePvecTrue().X();
+  }
+
+  double GetLeadingProtonReactionFramePyTrue() const
+  {
+    return GetLeadingProtonReactionFramePvecTrue().Y();
+  }
+
+  double GetLeadingProtonReactionFramePzTrue() const
+  {
+    return GetLeadingProtonReactionFramePvecTrue().Z();
+  }
+
+  ROOT::Math::XYZVector GetLeadingProtonReactionFramePvecReco() const
+  {
+    ROOT::Math::XYZVector protonP(GetDouble("MasterAnaDev_proton_Px_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Py_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Pz_fromdEdx")/1000.);
+    protonP = ConvertToBeamFrame(protonP);
+    ROOT::Math::PxPyPzEVector muon4V = GetMuon4V(); // MeV, in beam Frame
+    ROOT::Math::XYZVector muonP(muon4V.Px()/1000, muon4V.Py()/1000, muon4V.Pz()/1000); // GeV/c
+    return ConvertToReactionFrame(protonP, muonP);
+  }
+
+  double GetLeadingProtonReactionFramePxReco() const
+  {
+    return GetLeadingProtonReactionFramePvecReco().X();
+  }
+
+  double GetLeadingProtonReactionFramePyReco() const
+  {
+    return GetLeadingProtonReactionFramePvecReco().Y();
+  }
+
+  double GetLeadingProtonReactionFramePzReco() const
+  {
+    return GetLeadingProtonReactionFramePvecReco().Z();
+  }
+
+  // A sinple check of signal >=50 MeV proton -- Ziggy's CCQE-like selection  
+  bool GetHasAbove50MeVProton() const
+  {
+    std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
+    std::vector<double> energies = GetVecDouble("mc_FSPartE");
+    for (size_t i = 0; i < FSParticles.size(); i++)
+    {
+      if (FSParticles[i] == 2212 && energies[i] >= (M_p + 50.0))
+        return true;
+    }
+    return false;
+  }
+
+  // check if the event has elastic FSI bug fate particle, so to reweight them to 0 -- Ziggy
+  bool GetIsElasticFSIBugFate() const
+  {
+    int mc_incoming = GetInt("mc_incoming");
+    int mc_primaryLepton = GetInt("mc_primaryLepton");
+    int mc_charm = GetInt("mc_charm");
+    int mc_intType = GetInt("mc_intType");
+    int mc_targetA = GetInt("mc_targetA");
+    int mc_targetZ = GetInt("mc_targetZ");
+    int mc_er_nPart = GetInt("mc_er_nPart");
+    std::vector<int> mc_er_ID     = GetVecInt("mc_er_ID");
+    std::vector<int> mc_er_status = GetVecInt("mc_er_status");
+    std::vector<int> mc_er_FD     = GetVecInt("mc_er_FD");
+    std::vector<int> mc_er_LD     = GetVecInt("mc_er_LD");
+    std::vector<int> mc_er_mother = GetVecInt("mc_er_mother");
+    std::vector<double> mc_er_Px = GetVecDouble("mc_er_Px");
+    std::vector<double> mc_er_Py = GetVecDouble("mc_er_Py");
+    std::vector<double> mc_er_Pz = GetVecDouble("mc_er_Pz");
+    std::vector<double> mc_er_E  = GetVecDouble("mc_er_E");
+
+    std::vector<int> fates = calcFates(
+      mc_incoming, mc_primaryLepton, mc_charm, mc_intType, mc_targetA,
+      mc_targetZ, mc_er_nPart, mc_er_ID, mc_er_status, mc_er_FD,
+      mc_er_LD, mc_er_mother, mc_er_Px, mc_er_Py, mc_er_Pz, mc_er_E
+    );
+
+    for (size_t i = 0; i < fates.size(); i++)
+    if (fates[i] == 3) return true;
+    return false;
+  }
+
+  // calculate fates of each particle in event record
+  // Copied from Andrew's weighters/weight_fsi.cxx
+  std::vector<Int_t> calcFates(
+    int mc_incoming,
+    int mc_primaryLepton,
+    int mc_charm,
+    int mc_intType,
+    int mc_targetA,
+    int mc_targetZ,
+    int mc_er_nPart,
+    const std::vector<int>& mc_er_ID,
+    const std::vector<int>& mc_er_status,
+    const std::vector<int>& mc_er_FD,
+    const std::vector<int>& mc_er_LD,
+    const std::vector<int>& mc_er_mother,
+    const std::vector<double>& mc_er_Px,
+    const std::vector<double>& mc_er_Py,
+    const std::vector<double>& mc_er_Pz,
+    const std::vector<double>& mc_er_E) const
+  {
+    // int vector initialized with fate = -1 for all particles. -- Ziggy 2026/1/26
+    std::vector<Int_t> tempFates(mc_er_nPart, -1); 
+    // the fate codes are what GENIE hA in GENIEv2 used.
+    // the fate codes for hN and GENIEv3 have different numerology.
+    // beware if you are forward porting this code, or it will hurt.
+    for(Int_t i=0; i < mc_er_nPart; ++i)
+    {
+      if(mc_er_status[i] == 14)
+      {
+        Int_t tempfate = -1;
+        // Only track fates for proton, neutron, pizero, piplus, piminus.
+        if (mc_er_ID[i] == 2212 || mc_er_ID[i] == 2112 || mc_er_ID[i] == 111 || TMath::Abs(mc_er_ID[i])==211)
+        {
+          // The distinguishing feature is first daughter last daughter
+          // get an easy handle to these for use later
+          Int_t fd = mc_er_FD[i];
+          Int_t ld = mc_er_LD[i];
+
+          // is one of these a pion
+          Int_t isaPion = 0;
+          if(mc_er_ID[i] == 111 || TMath::Abs(mc_er_ID[i] == 211)) isaPion = 1;
+          
+          // how many daughters are pions
+          Int_t FSpions = 0;
+          for(int jj = mc_er_FD[i]; jj <= mc_er_LD[i]; ++jj)
+          if(TMath::Abs(mc_er_ID[jj]) == 211 || mc_er_ID[jj] == 111) FSpions++;
+          
+          if(mc_er_FD[i] == mc_er_LD[i])
+          {
+          // only one daughter.
+          //fate is either 1 = no interaction or 3 = elastic
+            // or 5 = absorption with a 3xxxxxxxx hadblob 
+          // This test of 25.00000 MeV is to separate elastic
+          // but the actual number changes with nucleus
+          // but most nuclei I know to six sig figs.
+          // unknown nuclei get an offset like 8 MeV
+          Double_t offset =  getGenieBEinMeV(mc_targetA);  //25.000000;
+          Double_t tolerance = 0.0001; //within machine precision
+          // unknown nuclei need a larger tolerance
+          if(TMath::Abs(offset - 8.0) < 0.1)tolerance = 1.2;
+          if(offset < 6.0) tolerance = 1.2;
+          if(mc_intType != 1) offset = 0.0;
+
+          if(mc_er_ID[fd] > 2000000000)
+            tempfate = 5;   // absorption on 3 nucleons
+          else if(TMath::Abs(mc_er_E[i] - mc_er_E[fd] - offset) < tolerance)
+            tempfate = 1;   // no scattering
+          else if(mc_er_ID[fd] != mc_er_ID[i])
+            tempfate = 2;   // charge exchange ?
+          else
+            tempfate = 3;   // elastic fate
+          }
+          else if(FSpions > 0 && !isaPion)
+            tempfate = 8;   // nucleon goes to pions
+          else if(isaPion && FSpions == 0)
+          {
+            tempfate = 5;
+            // was this two body absorption?
+            if(ld-fd == 1)
+            {
+              int p = 0;
+              int n = 0;
+              if(mc_er_ID[fd] == 2212)p++;
+              if(mc_er_ID[fd] == 2112)n++;
+              if(mc_er_ID[ld] == 2212)p++;
+              if(mc_er_ID[ld] == 2112)n++;
+              // use special codes for producing nn, pn, pp
+              if(p==1 && n==1)tempfate = 51;
+              if(p==2)tempfate = 52;
+              if(n==2)tempfate = 50;
+            }
+          }
+          else if(isaPion && FSpions >= 2)
+            tempfate = 8;
+          else if(isaPion && FSpions == 1)
+          {
+            tempfate = 4;
+          for(int jj = mc_er_FD[i]; jj <= mc_er_LD[i]; ++jj)
+            if((mc_er_ID[jj] == 111 || TMath::Abs(mc_er_ID[jj]) == 211) && mc_er_ID[jj] != mc_er_ID[i]) tempfate = 2;
+          }
+          else 
+          {
+            // is not a pion, so is a nucleon.
+            // if (verbose) std::cout << " Got unknown fate " << tempfate << std::endl;
+            // can't tell 2 CEX from 4 for nucleons.  Just assign to 4.
+            tempfate = 4;  // or four, can't tell.
+          }
+        } // if nucleons and pions
+        tempFates[i] = tempfate;
+      }   // end status14
+    } // loop over mc_er_nPart
+  
+    return tempFates;
+  }
+
+  // Get GENIE binding energy in MeV
+  double getGenieBEinMeV(const int A) const
+  {
+    // From UserPhysicsOptions.xml file
+    // these are hard coded, so we can get an exact match
+    // but beware if you try to port this code to any new GENIE.
+
+    if (A == 1) return 0; // hydrogen
+    if (A == 6) return 17.0; // lithium
+    if (A == 12) return 25.0; // carbon
+    if (A == 16) return 27.0; // oxygen
+    if (A == 24) return 32.0; // magnesium
+    if (A == 40) return 29.5; // argon
+    if (A == 48) return 30.0; // Ti48
+    if (A == 56) return 36.0; // 56 iron
+    if (A == 58) return 36.0; // 58 nickel
+    if (A >= 206 && A <= 208) return 44.0; // 208 lead
+
+    // Specialty in MINERvA,picked off numbers by hand.
+    if (A == 28) return 8.219751;  // silicon
+    if (A == 27) return 8.115287;  // aluminum
+    if (A == 14) return 7.185166;  // nitrogen
+    if (A == 55) return 8.653063;  // iron55 or manganese55
+    if (A == 35) return 8.347164;  // chlorine  
+
+    if (A == 4) return 5.0;  // this is rough, 
+
+    // else
+    // this is a problem, all other numbers come from a semi-empirical binding energy formula
+    // need to back off the QE precision for those.
+    return 8.0;   // GENIE defaults to something like this.  Needs to be exact.  Check it.
   }
 
   // Following functions are copied from Carlos's NuETKI/event/CVUniverse.h.
@@ -496,7 +737,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     return hasPhoton;
   }
 
-  //Returns a root XYZVector object containing the lepton (muon for my CCQEnu study -- Ziggy) transverse 3 momentum
+  // Reco proton Pt vector
   ROOT::Math::XYZVector GetProtonPtVec() const
   {
     ROOT::Math::XYZVector protonP_vec(GetDouble("MasterAnaDev_proton_Px_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Py_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Pz_fromdEdx")/1000.);

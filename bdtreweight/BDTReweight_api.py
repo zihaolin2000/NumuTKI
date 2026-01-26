@@ -35,12 +35,26 @@ _rw_others = load_reweighter('others')
 
 # ================== PREDICT FUNCTIONS ==================
 
+# Normalization factors to match topology cross section from
+# v2.12.6 to v3 AR23
+with open("/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/CCQELike_MINERvA_GENIEv2_to_v3AR23_topology_normalizations.txt") as file:
+    normalizations = [float(line) for line in file if line.strip()]
+# normalizations = [
+#     0.6708822582317281,
+#     1.0428589573638039,
+#     1.300011582357502,
+#     1.21582406007389,
+#     1.6893132112996045,
+#     1.0831229924786883,
+#     0.927843237453098
+# ]
+
 # reweight_variables = [
 #     'total_proton_px','total_proton_py','total_proton_pz',
 #     'total_proton_KE','leading_muon_py','leading_muon_pz'
 # ]
 def predict_weight_0p0n(features):
-    w = _rw_0p0n.predict_weight_single_event(features)
+    w = _rw_0p0n.predict_weight_single_event(features) * normalizations[0]
     return float(w)
 
 # reweight_variables = [
@@ -49,7 +63,7 @@ def predict_weight_0p0n(features):
 #     'total_proton_KE','leading_muon_py','leading_muon_pz'
 # ]
 def predict_weight_0pNn(features):
-    w = _rw_0pNn.predict_weight_single_event(features)
+    w = _rw_0pNn.predict_weight_single_event(features) * normalizations[1]
     return float(w)
 
 # reweight_variables = [
@@ -57,7 +71,7 @@ def predict_weight_0pNn(features):
 #     'total_proton_KE','leading_muon_py','leading_muon_pz'
 # ]
 def predict_weight_1p0n(features):
-    w = _rw_1p0n.predict_weight_single_event(features)
+    w = _rw_1p0n.predict_weight_single_event(features) * normalizations[2]
     return float(w)
 
 # reweight_variables=[
@@ -66,7 +80,7 @@ def predict_weight_1p0n(features):
 #     'leading_neutron_px', 'leading_neutron_py', 'leading_neutron_pz'
 # ]
 def predict_weight_1pNn(features):
-    w = _rw_1pNn.predict_weight_single_event(features)
+    w = _rw_1pNn.predict_weight_single_event(features) * normalizations[3]
     return float(w)
 
 # reweight_variables = [
@@ -75,7 +89,7 @@ def predict_weight_1pNn(features):
 #     'subleading_proton_px', 'subleading_proton_py', 'subleading_proton_pz'
 # ]
 def predict_weight_2p0n(features):
-    w = _rw_2p0n.predict_weight_single_event(features)
+    w = _rw_2p0n.predict_weight_single_event(features) * normalizations[4]
     return float(w)
 
 # reweight_variables = [
@@ -85,7 +99,7 @@ def predict_weight_2p0n(features):
 #     'subleading_proton_px', 'subleading_proton_py', 'subleading_proton_pz'
 # ]
 def predict_weight_2pNn(features):
-    w = _rw_2pNn.predict_weight_single_event(features)
+    w = _rw_2pNn.predict_weight_single_event(features) * normalizations[5]
     return float(w)
 
 # reweight_variables = [
@@ -93,7 +107,7 @@ def predict_weight_2pNn(features):
 #     'total_proton_KE','leading_muon_py','leading_muon_pz'
 # ]
 def predict_weight_others(features):
-    w = _rw_others.predict_weight_single_event(features)
+    w = _rw_others.predict_weight_single_event(features) * normalizations[6]
     return float(w)
 
 

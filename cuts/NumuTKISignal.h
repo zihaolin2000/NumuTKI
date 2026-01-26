@@ -116,6 +116,37 @@ namespace truth
     };
 */
 
+  template <class UNIVERSE>
+    class HasAbove50MeVProton: public PlotUtils::SignalConstraint<UNIVERSE>
+    {
+    public:
+    HasAbove50MeVProton(): PlotUtils::SignalConstraint<UNIVERSE>("Has FS Proton with Tp >= 50 MeV")
+    {
+    }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return univ.GetHasAbove50MeVProton();
+      }
+    };
+
+    template <class UNIVERSE>
+    class Is1p0nTopology: public PlotUtils::SignalConstraint<UNIVERSE>
+    {
+    public:
+    Is1p0nTopology(): PlotUtils::SignalConstraint<UNIVERSE>("Is 1p0n Topology")
+    {
+    }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return (univ.GetCCQELikeCategory(50,10) == 2);
+      }
+    };
+
+
   // Copying classes from Carlos's NuETKI/cuts/NuETKISignal.h.
   // -- Ziggy
   template <class UNIVERSE>

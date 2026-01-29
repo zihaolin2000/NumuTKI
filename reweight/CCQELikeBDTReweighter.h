@@ -40,7 +40,7 @@ namespace PlotUtils
         py::initialize_interpreter();
         // sys insert to find the api
         py::module sys = py::module::import("sys");
-        sys.attr("path").attr("insert")(0, "/exp/minerva/app/users/zihaolin/MINERvA101_2025/MINERvA-101-Cross-Section/bdtreweight");
+        sys.attr("path").attr("insert")(0, "/exp/minerva/app/users/zihaolin/MINERvA101_2025/MINERvA-101-Cross-Section/reweight");
         py::module api = py::module::import("BDTReweight_api");
         predict_0p0n = api.attr("predict_weight_0p0n");
         predict_0pNn = api.attr("predict_weight_0pNn");
@@ -61,22 +61,26 @@ namespace PlotUtils
         py::gil_scoped_acquire gil;
         int category = univ.GetCCQELikeCategory(50, 10); // proton, neutron detecting KE threshold: 50 MeV, 10 MeV
         std::vector<double> features = univ.GetReactionFrameReweightFeatures(category);
+        double weight(0.0);
         if (category == 0)
-          return predict_0p0n(features).cast<double>();
+          weight = predict_0p0n(features).cast<double>();
         else if (category == 1)
-          return predict_0pNn(features).cast<double>();
+          weight = predict_0pNn(features).cast<double>();
         else if (category == 2)
-          return predict_1p0n(features).cast<double>();
+          weight = predict_1p0n(features).cast<double>();
         else if (category == 3)
-          return predict_1pNn(features).cast<double>();
+          weight = predict_1pNn(features).cast<double>();
         else if (category == 4)
-          return predict_2p0n(features).cast<double>();
+          weight = predict_2p0n(features).cast<double>();
         else if (category == 5)
-          return predict_2pNn(features).cast<double>();
+          weight = predict_2pNn(features).cast<double>();
         else if (category == 6)
-          return predict_others(features).cast<double>();
+          weight = predict_others(features).cast<double>();
         else
-          return 1.0;
+          weight = 1.0;
+
+        if(weight > 100) return 0.0; // Drop large weight events
+        else return weight;
       }
 
       std::string GetName() const override { return "CCQELikeBDTGENIE"; }

@@ -31,35 +31,35 @@ namespace truth
 
 
   template <class UNIVERSE>
-    class IsAntiNeutrino: public PlotUtils::SignalConstraint<UNIVERSE>
-    {
+  class IsAntiNeutrino: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
     public:
-    IsAntiNeutrino(): PlotUtils::SignalConstraint<UNIVERSE>("IsAntiNeutrino")
-	{
-	}
+      IsAntiNeutrino(): PlotUtils::SignalConstraint<UNIVERSE>("IsAntiNeutrino")
+      {
+      }
 
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
         return univ.GetTruthNuPDG() == -14;
       }
-    };
+  };
 
   // Checks muon flavor, will accept both nu and anti nu
   template <class UNIVERSE>
-    class IsNumu: public PlotUtils::SignalConstraint<UNIVERSE>
-    {
+  class IsNumu: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
     public:
-    IsNumu(): PlotUtils::SignalConstraint<UNIVERSE>("IsNumu or AntiNumu")
-	{
-	}
+      IsNumu(): PlotUtils::SignalConstraint<UNIVERSE>("IsNumu or AntiNumu")
+      {
+      }
 
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
         return abs(univ.GetTruthNuPDG()) == 14;
       }
-    };
+  };
 
 
 
@@ -117,99 +117,116 @@ namespace truth
 */
 
   template <class UNIVERSE>
-    class HasAbove50MeVProton: public PlotUtils::SignalConstraint<UNIVERSE>
-    {
+  class HasAbove50MeVProton: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
     public:
-    HasAbove50MeVProton(): PlotUtils::SignalConstraint<UNIVERSE>("Has FS Proton with Tp >= 50 MeV")
-    {
-    }
+      HasAbove50MeVProton(): PlotUtils::SignalConstraint<UNIVERSE>("Has FS Proton with Tp >= 50 MeV")
+      {
+      }
 
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
         return univ.GetHasAbove50MeVProton();
       }
-    };
+  };
 
-    template <class UNIVERSE>
-    class Is1p0nTopology: public PlotUtils::SignalConstraint<UNIVERSE>
-    {
+  template <class UNIVERSE>
+  class Is1p0nTopology: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
     public:
-    Is1p0nTopology(): PlotUtils::SignalConstraint<UNIVERSE>("Is 1p0n Topology")
-    {
-    }
+      Is1p0nTopology(): PlotUtils::SignalConstraint<UNIVERSE>("Is 1p0n Topology")
+      {
+      }
 
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
         return (univ.GetCCQELikeCategory(50,10) == 2);
       }
-    };
+  };
+
+  template <class UNIVERSE>
+  class IsTargetCarbon: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
+    public:
+      IsTargetCarbon(): PlotUtils::SignalConstraint<UNIVERSE>("Is Target Carbon")
+      {
+      }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return univ.GetIsTargetCarbon();
+      }
+  };
 
 
   // Copying classes from Carlos's NuETKI/cuts/NuETKISignal.h.
   // -- Ziggy
   template <class UNIVERSE>
-    class HasSignalProton: public PlotUtils::SignalConstraint<UNIVERSE>
-    {
+  class HasSignalProton: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
     public:
-    HasSignalProton(): PlotUtils::SignalConstraint<UNIVERSE>("HasSignalProton (450 < P_p < 1200 MeV/c, (Theta_p < 70 deg OR > 110 deg))")
-      {
-      }
+      HasSignalProton(): PlotUtils::SignalConstraint<UNIVERSE>("HasSignalProton (450 < P_p < 1200 MeV/c, (Theta_p < 70 deg OR > 110 deg))")
+        {
+        }
 
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
         return (univ.GetHasSignalFSProton()==1);
       }
-    };
+  };
 
   template <class UNIVERSE>
-    class HasNoMeson: public PlotUtils::SignalConstraint<UNIVERSE>
-    {
+  class HasNoMeson: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
     public:
-    HasNoMeson(): PlotUtils::SignalConstraint<UNIVERSE>("HasNoMesons")
-      {
-      }
+      HasNoMeson(): PlotUtils::SignalConstraint<UNIVERSE>("HasNoMesons")
+        {
+        }
 
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
-        return (univ.GetHasFSMeson()==0);
+        // return (univ.GetHasFSMeson()==0);
+        return univ.GetHasFSMeson() == false;
       }
-    };
+  };
 
   template <class UNIVERSE>
-    class HasNoPhoton: public PlotUtils::SignalConstraint<UNIVERSE>
-    {
+  class HasNoPhoton: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
     public:
-    HasNoPhoton(): PlotUtils::SignalConstraint<UNIVERSE>("HasNoPhoton (above 10 MeV)")
-      {
-      }
+      HasNoPhoton(): PlotUtils::SignalConstraint<UNIVERSE>("HasNoPhoton")
+        {
+        }
 
     private:
       bool checkConstraint(const UNIVERSE& univ) const override
       {
-        return (univ.GetHasFSPhoton()==0);
+        // return (univ.GetHasFSPhoton()==0);
+        return univ.GetHasFSPhoton() == false;
       }
-    };
+  };
 
   template <class UNIVERSE>
   class MuonAngle: public PlotUtils::SignalConstraint<UNIVERSE>
-  {
-    public:
-      MuonAngle(const double angleMax): PlotUtils::SignalConstraint<UNIVERSE>(std::string("Muon Angle ") + std::to_string(angleMax)), fMax(angleMax*M_PI/180.)
-      {
-      }
+    {
+      public:
+        MuonAngle(const double angleMax): PlotUtils::SignalConstraint<UNIVERSE>(std::string("Muon Angle ") + std::to_string(angleMax)), fMax(angleMax*M_PI/180.)
+        {
+        }
 
-    private:
-      bool checkConstraint(const UNIVERSE& univ) const override
-      {
-        return univ.GetThetalepTrue() <= fMax;
-      }
+      private:
+        bool checkConstraint(const UNIVERSE& univ) const override
+        {
+          return univ.GetThetalepTrue() <= fMax;
+        }
 
-      const double fMax;
-  };
+        const double fMax;
+    };
 
   template <class UNIVERSE>
   class PZMuMin: public PlotUtils::SignalConstraint<UNIVERSE>

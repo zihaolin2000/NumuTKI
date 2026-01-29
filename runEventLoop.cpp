@@ -399,9 +399,10 @@ int main(const int argc, const char** argv)
   // -- Ziggy
   signalDefinition.emplace_back(new truth::IsNeutrino<CVUniverse>());
   signalDefinition.emplace_back(new truth::IsCC<CVUniverse>());
+  signalDefinition.emplace_back(new truth::IsTargetCarbon<CVUniverse>()); // Require target to be Carbon -- Ziggy
   // signalDefinition.emplace_back(new truth::HasSignalProton<CVUniverse>());
-  // signalDefinition.emplace_back(new truth::HasAbove50MeVProton<CVUniverse>());// Use my >=50 MeV definition instead -- Ziggy
-  signalDefinition.emplace_back(new truth::Is1p0nTopology<CVUniverse>()); // 1p0n selection -- Ziggy
+  signalDefinition.emplace_back(new truth::HasAbove50MeVProton<CVUniverse>()); // Use my >=50 MeV definition instead -- Ziggy
+  // signalDefinition.emplace_back(new truth::Is1p0nTopology<CVUniverse>()); // 1p0n selection -- Ziggy
   signalDefinition.emplace_back(new truth::HasNoMeson<CVUniverse>());
   signalDefinition.emplace_back(new truth::HasNoPhoton<CVUniverse>());
                                                                                                                                                    
@@ -421,6 +422,7 @@ int main(const int argc, const char** argv)
   PlotUtils::Cutter<CVUniverse, MichelEvent> mycuts(std::move(preCuts), std::move(sidebands) , std::move(signalDefinition),std::move(phaseSpace));
 
   std::vector<std::unique_ptr<PlotUtils::Reweighter<CVUniverse, MichelEvent>>> MnvTunev1;
+  // Turn off FluxAndCVReweighter, MINOSEfficiencyReweighter for now -- 2026/1/27 Ziggy
   MnvTunev1.emplace_back(new PlotUtils::FluxAndCVReweighter<CVUniverse, MichelEvent>());
   MnvTunev1.emplace_back(new PlotUtils::MINOSEfficiencyReweighter<CVUniverse, MichelEvent>());
   // Turn off GENIEReweighter, LowRecoil2p2hReweighter, RPAReweighter for now -- 2026/1/12 Ziggy
@@ -431,7 +433,7 @@ int main(const int argc, const char** argv)
   // Reweight elastic FSI bug events to 0.0 -- 2026/1/26 Ziggy
   MnvTunev1.emplace_back(new PlotUtils::ElasticFSIReweighter<CVUniverse, MichelEvent>());
   // CCQE-like BDT reweight -- 2026/1/15 Ziggy
-  // MnvTunev1.emplace_back(new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>());
+  MnvTunev1.emplace_back(new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>());
 
   PlotUtils::Model<CVUniverse, MichelEvent> model(std::move(MnvTunev1));
 
@@ -474,15 +476,14 @@ int main(const int argc, const char** argv)
 
   std::vector<Variable*> vars =
   {
-    new Variable("pTmu", "p_{T, #mu} [GeV/c]", dansPTBins, &CVUniverse::GetMuonPT, &CVUniverse::GetMuonPTTrue),
+    // new Variable("pTmu", "p_{T, #mu} [GeV/c]", dansPTBins, &CVUniverse::GetMuonPT, &CVUniverse::GetMuonPTTrue),
+    // new Variable("pzmu", "p_{||, #mu} [GeV/c]", dansPzBins, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+    // new Variable("Erecoil", "E_{recoil}", robsRecoilBins, &CVUniverse::GetRecoilE, &CVUniverse::Getq0True),
+    // new Variable("Emu", "E_{#mu} [GeV]", robsEmuBins, &CVUniverse::GetEmuGeV, &CVUniverse::GetElepTrueGeV),
+    // new Variable("DeltaPt", "#deltaP_{T} [GeV/c]", tejin_dptBins, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    // new Variable("AlphaPt", "#delta#alpha_{T} [deg]", protonAngleBins, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+    // new Variable("PhiPt", "#delta#phi_{T} [deg]", phiAngleBins, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
     // Get CCQEnu TKI variables here -- Ziggy
-    // TODO:: reco sum Tp in CVUniverse
-    new Variable("pzmu", "p_{||, #mu} [GeV/c]", dansPzBins, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
-    new Variable("Erecoil", "E_{recoil}", robsRecoilBins, &CVUniverse::GetRecoilE, &CVUniverse::Getq0True),
-    new Variable("Emu", "E_{#mu} [GeV]", robsEmuBins, &CVUniverse::GetEmuGeV, &CVUniverse::GetElepTrueGeV),
-    new Variable("DeltaPt", "#deltaP_{T} [GeV/c]", tejin_dptBins, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
-    new Variable("AlphaPt", "#delta#alpha_{T} [deg]", protonAngleBins, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
-    new Variable("PhiPt", "#delta#phi_{T} [deg]", phiAngleBins, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
     new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
     new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
     new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.5, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
@@ -491,7 +492,9 @@ int main(const int argc, const char** argv)
     new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 3, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
     new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.6, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
     new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
-    new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue)
+    new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+    new Variable("Eavail", "E_{avail} [GeV/c]", 30, 0, 3, &CVUniverse::GetEavailGeV, &CVUniverse::GetEavailTrue),
+    new Variable("Enu", "E_{#nu} [GeV/c]", 30, 0, 20, &CVUniverse::GetEnuGeV, &CVUniverse::GetEnuTrueGeV)
   };
 
   std::vector<Variable2D*> vars2D;

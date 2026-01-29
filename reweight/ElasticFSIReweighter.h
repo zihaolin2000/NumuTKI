@@ -36,7 +36,8 @@ namespace PlotUtils
 
             double GetWeight(const UNIVERSE& univ, const EVENT& /*event*/) const override
             {
-                if(univ.GetIsElasticFSIBugFate())
+                // only check for CCQE-like 1p0n final states
+                if((univ.GetCCQELikeCategory(50,10) == 2) && univ.GetIsElasticFSIBugFate())
                     return 0.0;
                 else
                     return 1.0;

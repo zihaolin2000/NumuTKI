@@ -42,8 +42,10 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   // matched to Dan's CCQENuInclusiveME variables from:
   // `/minerva/app/users/drut1186/cmtuser/Minerva_v22r1p1_OrigCCQENuInc/Ana/CCQENu/ana_common/include/CCQENuUtils.h`
   // ========================================================================
-  static constexpr double M_n = 939.56536;
-  static constexpr double M_p = 938.272013;
+  static constexpr double M_n = 939.56536;  //MeV
+  static constexpr double M_p = 938.272013; //MeV
+  static constexpr double M_e = 0.51099895; //MeV
+  static constexpr double M_pi = 139.57039; //MeV
   static constexpr double M_nucleon = (1.5*M_n+M_p)/2.5;
 
   static constexpr int PDG_n = 2112;
@@ -158,9 +160,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     std::vector<double> energies = GetVecDouble("mc_FSPartE");
     for (size_t i = 0; i < FSParticles.size(); i++)
     {
-      if (FSParticles[i] == 2212 && (energies[i] - M_p) >= proton_threshold)
+      if (FSParticles[i] == 2212 && ((energies[i] - M_p) >= proton_threshold))
         n_protons++;
-      else if (FSParticles[i] == 2112 && (energies[i] - M_n) >= neutron_threshold)
+      else if (FSParticles[i] == 2112 && ((energies[i] - M_n) >= neutron_threshold))
         n_neutrons++;
     }
     if (n_protons == 0 && n_neutrons == 0)
@@ -356,7 +358,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   std::vector<double> GetReactionFrameReweightFeatures(const int category) const
   {
     std::vector<double> features = {-999, -999, -999};
-    ROOT::Math::XYZVector beamPmu = GetParticlePVec(GetMuonIndex());
+    // ROOT::Math::XYZVector beamPmu = GetParticlePVec(GetMuonIndex());
+    ROOT::Math::XYZVector beamPmu(GetVecElem("mc_primFSLepton", 0)/1000, GetVecElem("mc_primFSLepton", 1)/1000, GetVecElem("mc_primFSLepton", 2)/1000);
+    beamPmu = ConvertToBeamFrame(beamPmu);
     double totalTp = GetTotalProtonTp(), muonPy = - GetMuonPTTrue()/1000, muonPz = GetMuonPzTrue()/1000; // Use truth muon PT Pz
     if (category == 0) // 0p0n
     {
@@ -377,6 +381,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     else if (category == 2  || category == 6) // 1p0n or others
     {
       ROOT::Math::XYZVector leadingPp = ConvertToReactionFrame(GetParticlePVec(GetLeadingProtonIndex()), beamPmu);
+      // "1p0n": reweight_variables=['leading_proton_px','leading_proton_py','leading_proton_pz','total_proton_KE','leading_muon_py','leading_muon_pz']
+      // "others": reweight_variables=['leading_proton_px','leading_proton_py','leading_proton_pz','total_proton_KE','leading_muon_py','leading_muon_pz']
       features = {leadingPp.X(), leadingPp.Y(), leadingPp.Z(), totalTp, muonPy, muonPz};
     }
     else if (category == 3) // 1pNn
@@ -385,6 +391,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse
       ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), beamPmu);
       features =
       {
+        // reweight_variables=['leading_proton_px','leading_proton_py','leading_proton_pz','total_proton_KE',
+        // 'leading_muon_py','leading_muon_pz', 'leading_neutron_px', 'leading_neutron_py', 'leading_neutron_pz',]
         leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
         totalTp, muonPy, muonPz,
         leadingPn.X(), leadingPn.Y(), leadingPn.Z()
@@ -399,6 +407,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse
       ROOT::Math::XYZVector subLeadingPp = ConvertToReactionFrame(GetParticlePVec(subleading_i), beamPmu);
       features =
       {
+        // reweight_variables=['leading_proton_px','leading_proton_py','leading_proton_pz','total_proton_KE',
+        // 'leading_muon_py','leading_muon_pz', 'subleading_proton_px', 'subleading_proton_py', 'subleading_proton_pz',]
         leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
         totalTp, muonPy, muonPz,
         subLeadingPp.X(), subLeadingPp.Y(), subLeadingPp.Z()
@@ -414,10 +424,12 @@ class CVUniverse : public PlotUtils::MinervaUniverse
       ROOT::Math::XYZVector leadingPn = ConvertToReactionFrame(GetParticlePVec(GetLeadingNeutronIndex()), beamPmu);
       features =
       {
+        // reweight_variables=['leading_proton_px','leading_proton_py','leading_proton_pz','total_proton_KE',
+        // 'leading_neutron_px', 'leading_neutron_py', 'leading_neutron_pz',
+        // 'leading_muon_py','leading_muon_pz', 'subleading_proton_px', 'subleading_proton_py', 'subleading_proton_pz',]
         leadingPp.X(), leadingPp.Y(), leadingPp.Z(),
-        totalTp, muonPy, muonPz,
-        leadingPn.X(), leadingPn.Y(), leadingPn.Z(),
-        subLeadingPp.X(), subLeadingPp.Y(), subLeadingPp.Z()
+        totalTp, leadingPn.X(), leadingPn.Y(), leadingPn.Z(),
+        muonPy, muonPz, subLeadingPp.X(), subLeadingPp.Y(), subLeadingPp.Z()
       };
     }
     return features;
@@ -425,7 +437,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse
 
   ROOT::Math::XYZVector GetLeadingProtonReactionFramePvecTrue() const
   {
-    ROOT::Math::XYZVector muonP = GetParticlePVec(GetMuonIndex());
+    // ROOT::Math::XYZVector muonP = GetParticlePVec(GetMuonIndex());
+    ROOT::Math::XYZVector muonP(GetVecElem("mc_primFSLepton", 0)/1000, GetVecElem("mc_primFSLepton", 1)/1000, GetVecElem("mc_primFSLepton", 2)/1000);
+    muonP = ConvertToBeamFrame(muonP);
     ROOT::Math::XYZVector protonP = GetParticlePVec(GetLeadingProtonIndex());
     return ConvertToReactionFrame(protonP, muonP);
   }
@@ -476,7 +490,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     std::vector<double> energies = GetVecDouble("mc_FSPartE");
     for (size_t i = 0; i < FSParticles.size(); i++)
     {
-      if (FSParticles[i] == 2212 && energies[i] >= (M_p + 50.0))
+      if (FSParticles[i] == 2212 && (energies[i] >= (M_p + 50.0)))
         return true;
     }
     return false;
@@ -509,7 +523,7 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     );
 
     for (size_t i = 0; i < fates.size(); i++)
-    if (fates[i] == 3) return true;
+      if (fates[i] == 3) return true;
     return false;
   }
 
@@ -661,6 +675,21 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     return 8.0;   // GENIE defaults to something like this.  Needs to be exact.  Check it.
   }
 
+  bool GetIsTargetCarbon() const
+  {
+    return GetInt("mc_targetA") == 12;
+  }
+
+  double GetEnuTrueGeV() const // truth, GeV
+  {
+    return GetEnuTrue() / 1000;
+  }
+
+  double GetEnuGeV() const // reco, GeV
+  {
+    return GetEmuGeV() + GetEavailGeV();
+  }
+
   // Following functions are copied from Carlos's NuETKI/event/CVUniverse.h.
   // Change Carlos's electron naming to lepton.
   // -- Ziggy
@@ -707,34 +736,25 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   bool GetHasFSMeson() const
   {
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
-    bool hasMeson = false;
     for (size_t i = 0; i < FSParticles.size(); i++)
     {
-      //std::cout << "final state particle: " << i << ": " << FSParticles[i] << std::endl;
       if (abs(FSParticles[i]) == 211 || abs(FSParticles[i]) == 321 || abs(FSParticles[i]) == 311 || abs(FSParticles[i]) == 130 || abs(FSParticles[i]) == 111)
-      {
-      	hasMeson = true;
-      }
+        return true;
     }
-    //std::cout << "hasMeson: " << hasMeson<< std::endl;
-    return hasMeson;
+    return false;
   }
 
   bool GetHasFSPhoton() const
   {
     std::vector<int> FSParticles = GetVecInt("mc_FSPartPDG");
-    std::vector<double> energies = GetVecDouble("mc_FSPartE");
-    bool hasPhoton = false;
+    // std::vector<double> energies = GetVecDouble("mc_FSPartE");
     for (size_t i = 0; i < FSParticles.size(); i++)
     {
-      //std::cout << "final state particle: " << i << ": " << FSParticles[i] << std::endl;
-      if (abs(FSParticles[i]) == 22 && energies[i] > 10)
-      {
-      	hasPhoton = true;
-      }
+      // if (abs(FSParticles[i]) == 22 && energies[i] > 10)
+      if (abs(FSParticles[i]) == 22) // Try lifting photon KE threshold -- Ziggy
+        return true;
     }
-    //std::cout << "hasPhoton: " << hasPhoton<< std::endl;
-    return hasPhoton;
+    return false;
   }
 
   // Reco proton Pt vector
@@ -830,7 +850,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse
 
   double GetDeltaPtTrue() const
   {
-    int i = GetHighestEnergySignalProtonIndex();
+    // int i = GetHighestEnergySignalProtonIndex();
+    int i = GetLeadingProtonIndex(); // Use my leading proton definition instead. -- 2026/1/29 Ziggy
     if (i > -1){
       ROOT::Math::XYZVector leptonP_vec(GetVecElem("mc_primFSLepton", 0), GetVecElem("mc_primFSLepton", 1), GetVecElem("mc_primFSLepton", 2));
       ROOT::Math::XYZVector protonP_vec(GetVecElem("mc_FSPartPx",i), GetVecElem("mc_FSPartPy",i), GetVecElem("mc_FSPartPz",i));
@@ -854,7 +875,8 @@ class CVUniverse : public PlotUtils::MinervaUniverse
 
   double GetAlphaTTrue() const
   {
-    int i = GetHighestEnergySignalProtonIndex();
+    // int i = GetHighestEnergySignalProtonIndex();
+    int i = GetLeadingProtonIndex(); // Use my leading proton definition instead. -- 2026/1/29 Ziggy
     if (i > -1)
     {
       ROOT::Math::XYZVector leptonP_vec(GetVecElem("mc_primFSLepton", 0), GetVecElem("mc_primFSLepton", 1), GetVecElem("mc_primFSLepton", 2));
@@ -885,7 +907,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse
 
   double GetPhiTTrue() const
   {
-    int i = GetHighestEnergySignalProtonIndex();
+    // int i = GetHighestEnergySignalProtonIndex();
+    int i = GetLeadingProtonIndex(); // Use my leading proton definition instead. -- 2026/1/29 Ziggy
+
     if (i > -1)
     {
       ROOT::Math::XYZVector leptonP_vec(GetVecElem("mc_primFSLepton", 0), GetVecElem("mc_primFSLepton", 1), GetVecElem("mc_primFSLepton", 2));
@@ -909,6 +933,46 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     {
       return -999;
     }
+  }
+
+  // truth, GeV. Copied from Carlos' NuETKI. -- Ziggy
+  //E_avail as defined in truth, basically summing all sources of visible energy
+  double GetEavailTrue() const
+  {
+    double T_p = 0; //sum of proton kinetic energies
+    double T_pi = 0; //sum of charged pion kinetic energies
+    double E_pi0 = 0; //sume of neutral pion total energies
+    double E_s = 0; //Sum of (strange baryon energy - proton mass)
+    double E_sbar = 0; //Sum of (anti baryon energy + proton mass)
+    double E_other = 0; //sum of total energy of any other particles, NOT INCLUDING NEUTRONS
+
+    int nFSPart = GetInt("mc_nFSPart");
+    std::vector<double> FSPartPx = GetVecDouble("mc_FSPartPx");
+    std::vector<double> FSPartPy = GetVecDouble("mc_FSPartPy");
+    std::vector<double> FSPartPz = GetVecDouble("mc_FSPartPz");
+    std::vector<double> FSPartE = GetVecDouble("mc_FSPartE");
+    std::vector<int> FSPartPDG = GetVecInt("mc_FSPartPDG");
+
+    for (int i=0; i<nFSPart; i++){
+      if (abs(FSPartPDG[i]) == 11 || abs(FSPartPDG[i]) == 13 || FSPartPDG[i] == 2112 || FSPartPDG[i] > 1000000000){
+        continue; //don't want to count leptons, neutrons, or nuclear remnants
+      } else if (FSPartPDG[i] == 2212){ 
+        T_p += FSPartE[i] - M_p; //add only kinetic (not total) energy for protons
+      } else if (abs(FSPartPDG[i]) == 211){ 
+        T_pi += FSPartE[i] - M_pi; //add only kinetic (not total) energy for charged pions
+      } else if (abs(FSPartPDG[i]) == 111){ 
+        E_pi0 += FSPartE[i]; //add pi0 total energy
+      } else if (FSPartPDG[i] > 2000){
+        E_s += FSPartE[i] - M_p; //add total energy - proton mass for strange baryons (why?)
+      } else if (FSPartPDG[i] < 2000){
+        E_sbar += FSPartE[i] + M_p; //add total energy + proton mass for strange antibaryons (why???)
+      } else {
+        E_other += FSPartE[i]; //add total energy for anything else (mostly gammas, kaons i think?)
+      }
+    }
+
+    double E_avail = T_p + T_pi + E_pi0 + E_s + E_sbar + E_other;
+    return E_avail/1000.;
   }
 
   //============================================================================
@@ -946,23 +1010,28 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     return GetElepTrue()/1000.;
   }
 
-  int GetInteractionType() const {
+  int GetInteractionType() const
+  {
     return GetInt("mc_intType");
   }
 
-  int GetTargetNucleon() const {
+  int GetTargetNucleon() const
+  {
     return GetInt("mc_targetNucleon");
   }
   
-  double GetBjorkenXTrue() const {
+  double GetBjorkenXTrue() const
+  {
     return GetDouble("mc_Bjorkenx");
   }
 
-  double GetBjorkenYTrue() const {
+  double GetBjorkenYTrue() const
+  {
     return GetDouble("mc_Bjorkeny");
   }
 
-  virtual bool IsMinosMatchMuon() const {
+  virtual bool IsMinosMatchMuon() const
+  {
     return GetInt("has_interaction_vertex") == 1;
   }
   
@@ -994,7 +1063,13 @@ class CVUniverse : public PlotUtils::MinervaUniverse
   {
     return GetDouble("recoilE_SplineCorrected");
   }
-  
+
+  virtual double GetEavailGeV() const // reco, GeV -- Ziggy
+  {
+    // return GetDouble("recoilE_SplineCorrected") / 1000;
+    return GetCCQELikeTotalTpReco();
+  }
+
   virtual double GetQ2Reco() const
   {
     return GetDouble("qsquared_recoil");

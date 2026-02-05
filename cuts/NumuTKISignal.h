@@ -115,6 +115,20 @@ namespace truth
       const double fMin;
     };
 */
+  template <class UNIVERSE>
+  class Is2p2hExtendQ0Cut: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
+    public:
+      Is2p2hExtendQ0Cut(): PlotUtils::SignalConstraint<UNIVERSE>("Is 2p2h q3 < 1200 MeV")
+      {
+      }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return univ.GetIsq3Below1200MeV();
+      }
+  };
 
   template <class UNIVERSE>
   class HasAbove50MeVProton: public PlotUtils::SignalConstraint<UNIVERSE>
@@ -143,6 +157,66 @@ namespace truth
       bool checkConstraint(const UNIVERSE& univ) const override
       {
         return (univ.GetCCQELikeCategory(50,10) == 2);
+      }
+  };
+
+  template <class UNIVERSE>
+  class Is1pNnTopology: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
+    public:
+      Is1pNnTopology(): PlotUtils::SignalConstraint<UNIVERSE>("Is 1pNn Topology")
+      {
+      }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return (univ.GetCCQELikeCategory(50,10) == 3);
+      }
+  };
+
+  template <class UNIVERSE>
+  class Is2p0nTopology: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
+    public:
+      Is2p0nTopology(): PlotUtils::SignalConstraint<UNIVERSE>("Is 2p0n Topology")
+      {
+      }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return (univ.GetCCQELikeCategory(50,10) == 4);
+      }
+  };
+
+  template <class UNIVERSE>
+  class Is2pNnTopology: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
+    public:
+      Is2pNnTopology(): PlotUtils::SignalConstraint<UNIVERSE>("Is 2pNn Topology")
+      {
+      }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return (univ.GetCCQELikeCategory(50,10) == 5);
+      }
+  };
+
+    template <class UNIVERSE>
+  class Is3pOthersTopology: public PlotUtils::SignalConstraint<UNIVERSE>
+  {
+    public:
+      Is3pOthersTopology(): PlotUtils::SignalConstraint<UNIVERSE>("Is >=3p Topology")
+      {
+      }
+
+    private:
+      bool checkConstraint(const UNIVERSE& univ) const override
+      {
+        return (univ.GetCCQELikeCategory(50,10) == 6);
       }
   };
 

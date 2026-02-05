@@ -19,8 +19,13 @@ gc.disable()
 
 # Load pickled reweighters from path 
 # (query via category name: 0p0n, 0pNn, 1p0n, 1pNn, 2p0n, 2pNn, others)
+
+# train_folder = 'train_size_1M'
+train_folder = 'train_size_4M'
+
 def load_reweighter(category):
-    with open(f'/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/reweighter_MINERvA_ME_numuCarbon_CCQELike_GENIEv2_to_v3AR23_1mu{category}.pkl', 'rb') as f:
+    # with open(f'/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/reweighter_MINERvA_ME_numuCarbon_CCQELike_GENIEv2_to_v3AR23_1mu{category}.pkl', 'rb') as f:
+    with open(f'/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/{train_folder}/reweighter_MINERvA_ME_numuCarbon_CCQELike_GENIEv2_to_v3AR23_1mu{category}.pkl', 'rb') as f:
         reweighter = pickle.load(f)
     return reweighter
 
@@ -37,17 +42,9 @@ _rw_others = load_reweighter('others')
 
 # Normalization factors to match topology cross section from
 # v2.12.6 to v3 AR23
-with open("/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/CCQELike_MINERvA_GENIEv2_to_v3AR23_topology_normalizations.txt") as file:
+# with open("/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/CCQELike_MINERvA_GENIEv2_to_v3AR23_topology_normalizations.txt") as file:
+with open(f'/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/{train_folder}/CCQELike_MINERvA_GENIEv2_to_v3AR23_topology_normalizations.txt') as file:
     normalizations = [float(line) for line in file if line.strip()]
-# normalizations = [
-#     0.6708822582317281,
-#     1.0428589573638039,
-#     1.300011582357502,
-#     1.21582406007389,
-#     1.6893132112996045,
-#     1.0831229924786883,
-#     0.927843237453098
-# ]
 
 # reweight_variables = [
 #     'total_proton_px','total_proton_py','total_proton_pz',

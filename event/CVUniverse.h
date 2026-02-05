@@ -459,6 +459,68 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     return GetLeadingProtonReactionFramePvecTrue().Z();
   }
 
+  ROOT::Math::XYZVector GetSubleadingProtonReactionFramePvecTrue() const
+  {
+    ROOT::Math::XYZVector muonP(GetVecElem("mc_primFSLepton", 0)/1000, GetVecElem("mc_primFSLepton", 1)/1000, GetVecElem("mc_primFSLepton", 2)/1000);
+    muonP = ConvertToBeamFrame(muonP);
+    std::vector<int> ids = Get2HighestKEProtonIndices();
+    ROOT::Math::XYZVector protonP = GetParticlePVec(ids[1]);
+    return ConvertToReactionFrame(protonP, muonP);
+  }
+
+  double GetSubleadingProtonReactionFramePxTrue() const
+  {
+    return GetSubleadingProtonReactionFramePvecTrue().X();
+  }
+
+  double GetSubleadingProtonReactionFramePyTrue() const
+  {
+    return GetSubleadingProtonReactionFramePvecTrue().Y();
+  }
+
+  double GetSubleadingProtonReactionFramePzTrue() const
+  {
+    return GetSubleadingProtonReactionFramePvecTrue().Z();
+  }
+
+  ROOT::Math::XYZVector GetLeadingNeutronReactionFramePvecTrue() const
+  {
+    ROOT::Math::XYZVector muonP(GetVecElem("mc_primFSLepton", 0)/1000, GetVecElem("mc_primFSLepton", 1)/1000, GetVecElem("mc_primFSLepton", 2)/1000);
+    muonP = ConvertToBeamFrame(muonP);
+    ROOT::Math::XYZVector neutronP = GetParticlePVec(GetLeadingNeutronIndex());
+    return ConvertToReactionFrame(neutronP, muonP);
+  }
+
+  double GetLeadingNeutronReactionFramePxTrue() const
+  {
+    return GetLeadingNeutronReactionFramePvecTrue().X();
+  }
+
+  double GetLeadingNeutronReactionFramePyTrue() const
+  {
+    return GetLeadingNeutronReactionFramePvecTrue().Y();
+  }
+
+  double GetLeadingNeutronReactionFramePzTrue() const
+  {
+    return GetLeadingNeutronReactionFramePvecTrue().Z();
+  }
+
+  double GetMuonReactionFramePyTrue() const
+  {
+    return - GetMuonPTTrue();
+  }
+
+  double GetMuonReactionFramePyReco() const
+  {
+    return - GetMuonPT();
+  }
+
+  bool GetIsq3Below1200MeV() const
+  {
+    return (Getq3True() <= 1200.0);
+  }
+
   ROOT::Math::XYZVector GetLeadingProtonReactionFramePvecReco() const
   {
     ROOT::Math::XYZVector protonP(GetDouble("MasterAnaDev_proton_Px_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Py_fromdEdx")/1000., GetDouble("MasterAnaDev_proton_Pz_fromdEdx")/1000.);

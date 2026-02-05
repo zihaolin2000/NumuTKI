@@ -92,6 +92,7 @@ enum ErrorCodes
 //c++ includes
 #include <iostream>
 #include <cstdlib> //getenv()
+#include <map>
 
 //==============================================================================
 // Loop and Fill
@@ -401,8 +402,13 @@ int main(const int argc, const char** argv)
   signalDefinition.emplace_back(new truth::IsCC<CVUniverse>());
   signalDefinition.emplace_back(new truth::IsTargetCarbon<CVUniverse>()); // Require target to be Carbon -- Ziggy
   // signalDefinition.emplace_back(new truth::HasSignalProton<CVUniverse>());
-  signalDefinition.emplace_back(new truth::HasAbove50MeVProton<CVUniverse>()); // Use my >=50 MeV definition instead -- Ziggy
+  // signalDefinition.emplace_back(new truth::HasAbove50MeVProton<CVUniverse>()); // Use my >=50 MeV definition instead -- Ziggy
   // signalDefinition.emplace_back(new truth::Is1p0nTopology<CVUniverse>()); // 1p0n selection -- Ziggy
+  // signalDefinition.emplace_back(new truth::Is1pNnTopology<CVUniverse>()); // 1pNn selection -- Ziggy
+  // signalDefinition.emplace_back(new truth::Is2p0nTopology<CVUniverse>()); // 2p0n selection -- Ziggy
+  // signalDefinition.emplace_back(new truth::Is2pNnTopology<CVUniverse>()); // 2pNn selection -- Ziggy
+  signalDefinition.emplace_back(new truth::Is3pOthersTopology<CVUniverse>()); // >=3p selection -- Ziggy
+
   signalDefinition.emplace_back(new truth::HasNoMeson<CVUniverse>());
   signalDefinition.emplace_back(new truth::HasNoPhoton<CVUniverse>());
                                                                                                                                                    
@@ -483,17 +489,98 @@ int main(const int argc, const char** argv)
     // new Variable("DeltaPt", "#deltaP_{T} [GeV/c]", tejin_dptBins, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
     // new Variable("AlphaPt", "#delta#alpha_{T} [deg]", protonAngleBins, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
     // new Variable("PhiPt", "#delta#phi_{T} [deg]", phiAngleBins, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
-    // Get CCQEnu TKI variables here -- Ziggy
-    new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
-    new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
-    new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.5, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
-    new Variable("muon pT", "p_{T, #mu} [GeV/c]", 30, 0, 1.8, &CVUniverse::GetMuonPT, &CVUniverse::GetMuonPTTrue),
+
+    // // Get CCQE-like variables here, using default binning -- Ziggy
+    // // Specialized binning: all >=3p categories 
+    // new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+    // new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+    // new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.5, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+    // new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 3, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+    // new Variable("muon pT", "p_{T, #mu} [GeV/c]", 30, 0, 1.8, &CVUniverse::GetMuonPT, &CVUniverse::GetMuonPTTrue),
+    // new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+    // new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.6, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    // new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+    // new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+
+    // special binning: 1p0n
+    new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.35, 0.35, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+    new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, 0, 1.55, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+    new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.15, 2.7, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+    new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 2.25, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+    new Variable("muon py", "p_{y, #mu} [GeV/c]", 30, -1.7, -0.15, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
     new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
-    new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 3, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
-    new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.6, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 0.5, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
     new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
     new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
-    new Variable("Eavail", "E_{avail} [GeV/c]", 30, 0, 3, &CVUniverse::GetEavailGeV, &CVUniverse::GetEavailTrue),
+
+    // // special binning: 1pNn
+    // new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+    // new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.6, 1.4, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+    // new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.5, 2.7, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+    // new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 2.1, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+    // new Variable("muon py", "p_{y, #mu} [GeV/c]", 30, -1.6, 0, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
+    // new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 21, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+    // new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.5, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    // new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+    // new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+    // new Variable("leading n px", "p_{x, #n} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingNeutronReactionFramePxTrue),
+    // new Variable("leading n py", "p_{y, #n} [GeV/c]", 30, -0.7, 1.4, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingNeutronReactionFramePyTrue),
+    // new Variable("leading n pz", "p_{z, #n} [GeV/c]", 30, -0.6, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingNeutronReactionFramePzTrue),
+
+    // // special binning: 2p0n
+    // new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+    // new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.6, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+    // new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.4, 2.1, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+    // new Variable("subleading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetSubleadingProtonReactionFramePxTrue),
+    // new Variable("subleading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 0.9, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetSubleadingProtonReactionFramePyTrue),
+    // new Variable("subleading p pz", "p_{z, #p} [GeV/c]", 30, -0.55, 0.85, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetSubleadingProtonReactionFramePzTrue),
+    // new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 1.8, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+    // new Variable("muon py", "p_{y, #mu} [GeV/c]", 30, -1.5, 0, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
+    // new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 21, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+    // new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.1, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    // new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+    // new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+
+    // // special binning: 2pNn
+    // new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+    // new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.4, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+    // new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.6, 3.6, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+    // new Variable("subleading p px", "p_{x, #p} [GeV/c]", 30, -0.7, 0.7, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetSubleadingProtonReactionFramePxTrue),
+    // new Variable("subleading p py", "p_{y, #p} [GeV/c]", 30, -0.65, 0.75, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetSubleadingProtonReactionFramePyTrue),
+    // new Variable("subleading p pz", "p_{z, #p} [GeV/c]", 30, -0.55, 0.75, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetSubleadingProtonReactionFramePzTrue),
+    // new Variable("leading n px", "p_{x, #n} [GeV/c]", 30, -0.75, 0.75, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingNeutronReactionFramePxTrue),
+    // new Variable("leading n py", "p_{y, #n} [GeV/c]", 30, -0.65, 1.4, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingNeutronReactionFramePyTrue),
+    // new Variable("leading n pz", "p_{z, #n} [GeV/c]", 30, -0.6, 2.8, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingNeutronReactionFramePzTrue),
+    // new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 3.0, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+    // new Variable("muon py", "p_{y, #mu} [GeV/c]", 30, -1.55, 0, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
+    // new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 21, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+    // new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.65, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    // new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+    // new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+
+    // // special binning: others
+    // new Variable("leading p px", "p_{x, #p} [GeV/c]", 30, -1, 1, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+    // new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.8, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+    // new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.6, 4, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+    // new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 4, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+    // new Variable("muon py", "p_{y, #mu} [GeV/c]", 30, -1.7, -0.1, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
+    // new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+    // new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.8, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+    // new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+    // new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+
+
+    // TODO: Need a CVU function for reco subleading proton pvec. -- Ziggy
+    // new Variable("subleading p px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetSubleadingProtonReactionFramePxTrue),
+    // new Variable("subleading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.0, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetSubleadingProtonReactionFramePyTrue),
+    // new Variable("subleading p pz", "p_{z, #p} [GeV/c]", 30, -0.6, 1.0, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetSubleadingProtonReactionFramePzTrue),
+
+    // TODO: Need a CVU function for reco leading neutron pvec. -- Ziggy
+    // new Variable("leading n px", "p_{x, #n} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingNeutronReactionFramePxTrue),
+    // new Variable("leading n py", "p_{y, #n} [GeV/c]", 30, -0.7, 1.4, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingNeutronReactionFramePyTrue),
+    // new Variable("leading n pz", "p_{z, #n} [GeV/c]", 30, -0.6, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingNeutronReactionFramePzTrue),
+
+    // new Variable("Eavail", "E_{avail} [GeV/c]", 30, 0, 3, &CVUniverse::GetEavailGeV, &CVUniverse::GetEavailTrue),
     new Variable("Enu", "E_{#nu} [GeV/c]", 30, 0, 20, &CVUniverse::GetEnuGeV, &CVUniverse::GetEnuTrueGeV)
   };
 

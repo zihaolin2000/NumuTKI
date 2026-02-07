@@ -35,7 +35,9 @@ namespace PlotUtils
   class CCQELikeBDTReweighter: public Reweighter<UNIVERSE, EVENT>
   {
     public:
-      CCQELikeBDTReweighter(): Reweighter<UNIVERSE, EVENT> ()
+      CCQELikeBDTReweighter(): Reweighter<UNIVERSE, EVENT>(),
+      fSumWeights{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 
+      fNEvents{0, 0, 0, 0, 0, 0, 0}
       {
         py::initialize_interpreter();
         // sys insert to find the api
@@ -63,21 +65,51 @@ namespace PlotUtils
         std::vector<double> features = univ.GetReactionFrameReweightFeatures(category);
         double weight(0.0);
         if (category == 0)
+        {
           weight = predict_0p0n(features).cast<double>();
+          fSumWeights[0] += weight;
+          fNEvents[0] += 1;
+        }
         else if (category == 1)
+        {
           weight = predict_0pNn(features).cast<double>();
+          fSumWeights[1] += weight;
+          fNEvents[1] += 1;
+        }
         else if (category == 2)
+        {
           weight = predict_1p0n(features).cast<double>();
+          fSumWeights[2] += weight;
+          fNEvents[2] += 1;
+        }
         else if (category == 3)
+        {
           weight = predict_1pNn(features).cast<double>();
+          fSumWeights[3] += weight;
+          fNEvents[3] += 1;
+        }
         else if (category == 4)
+        {
           weight = predict_2p0n(features).cast<double>();
+          fSumWeights[4] += weight;
+          fNEvents[4] += 1;
+        }
         else if (category == 5)
+        {
           weight = predict_2pNn(features).cast<double>();
+          fSumWeights[5] += weight;
+          fNEvents[5] += 1;
+        }
         else if (category == 6)
+        {
           weight = predict_others(features).cast<double>();
+          fSumWeights[6] += weight;
+          fNEvents[6] += 1;
+        }
         else
+        {
           weight = 1.0;
+        }
 
         if(weight > 100) return 0.0; // Drop large weight events
         else return weight;
@@ -86,6 +118,16 @@ namespace PlotUtils
       std::string GetName() const override { return "CCQELikeBDTGENIE"; }
 
       bool DependsReco() const override { return false; }
+
+      std::vector<double> GetTotalWeights() const
+      {
+        return fSumWeights;
+      }
+
+      std::vector<int> GetnCCQELikeEvents() const
+      {
+        return fNEvents;
+      }
       
     private:
       py::object predict_0p0n;
@@ -95,6 +137,8 @@ namespace PlotUtils
       py::object predict_2p0n;
       py::object predict_2pNn;
       py::object predict_others;
+      mutable std::vector<int> fNEvents;
+      mutable std::vector<double> fSumWeights;
   };
 }
 

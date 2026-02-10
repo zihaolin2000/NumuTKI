@@ -22,6 +22,7 @@ gc.disable()
 
 # train_folder = 'train_size_1M'
 train_folder = 'train_size_4M'
+print(f'Use {train_folder}')
 
 def load_reweighter(category):
     # with open(f'/exp/minerva/data/users/zihaolin/BDTReweighters/saved_reweighters_pickle/reweighter_MINERvA_ME_numuCarbon_CCQELike_GENIEv2_to_v3AR23_1mu{category}.pkl', 'rb') as f:

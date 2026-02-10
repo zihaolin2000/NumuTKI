@@ -623,9 +623,9 @@ int main(const int argc, const char** argv)
       new Variable("leading p py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
       new Variable("leading p pz", "p_{z, #p} [GeV/c]", 30, -0.5, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
       new Variable("sum Tp", "T_{p} [GeV/c]", 30, 0, 3, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
-      new Variable("muon pT", "p_{T, #mu} [GeV/c]", 30, 0, 1.8, &CVUniverse::GetMuonPT, &CVUniverse::GetMuonPTTrue),
+      new Variable("muon py", "p_{y, #mu} [GeV/c]", 30, -1.7, -0.1, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
       new Variable("muon pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
-      new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.6, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+      new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.55, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
       new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
       new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
       new Variable("Enu", "E_{#nu} [GeV/c]", 30, 0, 20, &CVUniverse::GetEnuGeV, &CVUniverse::GetEnuTrueGeV)
@@ -741,7 +741,6 @@ int main(const int argc, const char** argv)
       for (int n : bdt_rw->GetnCCQELikeEvents())
         std::cout << n << " ";
       std::cout << std::endl;
-      
     }
 
   }

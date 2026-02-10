@@ -361,7 +361,9 @@ class CVUniverse : public PlotUtils::MinervaUniverse
     // ROOT::Math::XYZVector beamPmu = GetParticlePVec(GetMuonIndex());
     ROOT::Math::XYZVector beamPmu(GetVecElem("mc_primFSLepton", 0)/1000, GetVecElem("mc_primFSLepton", 1)/1000, GetVecElem("mc_primFSLepton", 2)/1000);
     beamPmu = ConvertToBeamFrame(beamPmu);
-    double totalTp = GetTotalProtonTp(), muonPy = - GetMuonPTTrue()/1000, muonPz = GetMuonPzTrue()/1000; // Use truth muon PT Pz
+    double totalTp = GetTotalProtonTp(), muonPy = - GetMuonPTTrue(), muonPz = GetMuonPzTrue(); // Use truth muon PT Pz 
+    // These muon turth functions are in *** GeV *** !!! -- Ziggy 2/9/2026
+
     if (category == 0) // 0p0n
     {
       ROOT::Math::XYZVector totalPp = ConvertToReactionFrame(GetTotalProtonPvec(), beamPmu);

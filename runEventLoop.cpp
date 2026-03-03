@@ -105,7 +105,9 @@ void LoopAndFillEventSelection(
     std::vector<Variable2D*> vars2D,
     std::vector<Study*> studies,
     PlotUtils::Cutter<CVUniverse, MichelEvent>& michelcuts,
-    PlotUtils::Model<CVUniverse, MichelEvent>& model)
+    PlotUtils::Model<CVUniverse, MichelEvent>& model,
+    PlotUtils::Model<CVUniverse, MichelEvent>& modelPreBDT,
+    bool BDTon)
 {
   assert(!error_bands["cv"].empty() && "\"cv\" error band is empty!  Can't set Model weight.");
   auto& cvUniv = error_bands["cv"].front();
@@ -120,6 +122,7 @@ void LoopAndFillEventSelection(
     cvUniv->SetEntry(i);
     model.SetEntry(*cvUniv, cvEvent);
     const double cvWeight = model.GetWeight(*cvUniv, cvEvent);
+    modelPreBDT.SetEntry(*cvUniv, cvEvent); // SetEntry of pre BDT model for bookkeeping -- Ziggy
 
     //=========================================
     // Systematics loop(s)
@@ -139,6 +142,7 @@ void LoopAndFillEventSelection(
         //weight is ignored in isMCSelected() for all but the CV Universe.
         if (!michelcuts.isMCSelected(*universe, myevent, cvWeight).all()) continue; //all is another function that will later help me with sidebands
         const double weight = model.GetWeight(*universe, myevent); //Only calculate the per-universe weight for events that will actually use it.
+        const double weightPreBDT = modelPreBDT.GetWeight(*universe, myevent); // Get pre BDT weight -- 2026/2/20 Ziggy
         for(auto& var: vars) var->selectedMCReco->FillUniverse(universe, var->GetRecoValue(*universe), weight); //"Fake data" for closure
 
         const bool isSignal = michelcuts.isSignal(*universe, weight);
@@ -153,6 +157,14 @@ void LoopAndFillEventSelection(
             var->efficiencyNumerator->FillUniverse(universe, var->GetTrueValue(*universe), weight);
             var->migration->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weight);
             var->selectedSignalReco->FillUniverse(universe, var->GetRecoValue(*universe), weight); //Efficiency numerator in reco variables.  Useful for warping studies.
+            if(BDTon)
+            {
+              // var->dMerr2->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), (weight - weightPreBDT)*(weight - weightPreBDT));
+              // Use these matrices to store w0*w1, w0*w0, w1*w1 (so to calculate covariance)
+              var->sum_w0w1->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weight * weightPreBDT);
+              var->sum_w0w0->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weightPreBDT * weightPreBDT);
+              var->sum_w1w1->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weight * weight);
+            }
           }
 
           for(auto& var: vars2D)
@@ -439,7 +451,7 @@ int main(const int argc, const char** argv)
   PlotUtils::Cutter<CVUniverse, MichelEvent> mycuts(std::move(preCuts), std::move(sidebands) , std::move(signalDefinition),std::move(phaseSpace));
 
   std::vector<std::unique_ptr<PlotUtils::Reweighter<CVUniverse, MichelEvent>>> MnvTunev1;
-  // Turn off FluxAndCVReweighter, MINOSEfficiencyReweighter for now -- 2026/1/27 Ziggy
+  // FluxAndCVReweighter, MINOSEfficiencyReweighter stay on -- 2026/2/19 Ziggy
   MnvTunev1.emplace_back(new PlotUtils::FluxAndCVReweighter<CVUniverse, MichelEvent>());
   MnvTunev1.emplace_back(new PlotUtils::MINOSEfficiencyReweighter<CVUniverse, MichelEvent>());
   // Turn off GENIEReweighter, LowRecoil2p2hReweighter, RPAReweighter for now -- 2026/1/12 Ziggy
@@ -458,6 +470,13 @@ int main(const int argc, const char** argv)
   }
 
   PlotUtils::Model<CVUniverse, MichelEvent> model(std::move(MnvTunev1));
+
+  // Make a pre-BDT model to book keep migration matrix error -- Ziggy 
+  std::vector<std::unique_ptr<PlotUtils::Reweighter<CVUniverse, MichelEvent>>> MnvTunePreBDT;
+  MnvTunePreBDT.emplace_back(new PlotUtils::FluxAndCVReweighter<CVUniverse, MichelEvent>());
+  MnvTunePreBDT.emplace_back(new PlotUtils::MINOSEfficiencyReweighter<CVUniverse, MichelEvent>());
+  MnvTunePreBDT.emplace_back(new PlotUtils::ElasticFSIReweighter<CVUniverse, MichelEvent>());
+  PlotUtils::Model<CVUniverse, MichelEvent> modelPreBDT(std::move(MnvTunePreBDT));
 
   // Make a map of systematic universes
   // Leave out systematics when making validation histograms
@@ -626,6 +645,7 @@ int main(const int argc, const char** argv)
       new Variable("muon_py", "p_{y, #mu} [GeV/c]", 30, -1.7, -0.1, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
       new Variable("muon_pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
       new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.55, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+      new Variable("dpt_cai", "#deltaP_{T,cai} [GeV/c]", tejin_dptBins, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
       new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
       new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
       new Variable("Enu", "E_{#nu} [GeV/c]", 30, 0, 20, &CVUniverse::GetEnuGeV, &CVUniverse::GetEnuTrueGeV)
@@ -661,7 +681,8 @@ int main(const int argc, const char** argv)
   try
   {
     CVUniverse::SetTruth(false);
-    LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model);
+    // LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model);
+    LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model, modelPreBDT, BDTon); // pass modelPreBDT and BDTon
     CVUniverse::SetTruth(true);
     LoopAndFillEffDenom(options.m_truth, truth_bands, vars, vars2D, mycuts, model);
     options.PrintMacroConfiguration(argv[0]);

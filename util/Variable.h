@@ -40,8 +40,6 @@ class Variable: public PlotUtils::VariableBase<CVUniverse>
       selectedMCReco = new Hist((GetName() + "_selected_mc_reco").c_str(), GetName().c_str(), GetBinVec(), mc_error_bands);
       migration = new PlotUtils::Hist2DWrapper<CVUniverse>((GetName() + "_migration").c_str(), GetName().c_str(), GetBinVec(), GetBinVec(), mc_error_bands);
       sum_w0w1 = new PlotUtils::Hist2DWrapper<CVUniverse>((GetName() + "_sum_w0w1").c_str(), GetName().c_str(), GetBinVec(), GetBinVec(), mc_error_bands);
-      sum_w0w0 = new PlotUtils::Hist2DWrapper<CVUniverse>((GetName() + "_sum_w0w0").c_str(), GetName().c_str(), GetBinVec(), GetBinVec(), mc_error_bands);
-      sum_w1w1 = new PlotUtils::Hist2DWrapper<CVUniverse>((GetName() + "_sum_w1w1").c_str(), GetName().c_str(), GetBinVec(), GetBinVec(), mc_error_bands);
     }
 
     //Histograms to be filled
@@ -54,8 +52,6 @@ class Variable: public PlotUtils::VariableBase<CVUniverse>
     Hist* selectedMCReco; //Treat the MC CV just like data for the closure test
     PlotUtils::Hist2DWrapper<CVUniverse>* migration;
     PlotUtils::Hist2DWrapper<CVUniverse>* sum_w0w1;
-    PlotUtils::Hist2DWrapper<CVUniverse>* sum_w0w0;
-    PlotUtils::Hist2DWrapper<CVUniverse>* sum_w1w1;
 
     void InitializeDATAHists(std::vector<CVUniverse*>& data_error_bands)
     {
@@ -105,18 +101,6 @@ class Variable: public PlotUtils::VariableBase<CVUniverse>
         sum_w0w1->hist->Write();
       }
 
-      if(sum_w0w0)
-      {
-        sum_w0w0->hist->SetDirectory(&file); 
-        sum_w0w0->hist->Write();
-      }
-
-            if(sum_w1w1)
-      {
-        sum_w1w1->hist->SetDirectory(&file); 
-        sum_w1w1->hist->Write();
-      }
-
       if(selectedSignalReco)
       {
         selectedSignalReco->hist->SetDirectory(&file);
@@ -144,8 +128,6 @@ class Variable: public PlotUtils::VariableBase<CVUniverse>
       if(selectedMCReco) selectedMCReco->SyncCVHistos();
       if(migration) migration->SyncCVHistos();
       if(sum_w0w1) sum_w0w1->SyncCVHistos();
-      if(sum_w0w0) sum_w0w0->SyncCVHistos();
-      if(sum_w1w1) sum_w1w1->SyncCVHistos();
     }
 };
 

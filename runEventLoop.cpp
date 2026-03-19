@@ -95,6 +95,10 @@ enum ErrorCodes
 #include <map>
 #include <string>
 
+int BDTon(0); // Make BDTon, category global variables -- 2026/3/12
+int category(-1);
+const double entries_portion(1.0); // Only do a portion of the entries
+
 //==============================================================================
 // Loop and Fill
 //==============================================================================
@@ -106,14 +110,14 @@ void LoopAndFillEventSelection(
     std::vector<Study*> studies,
     PlotUtils::Cutter<CVUniverse, MichelEvent>& michelcuts,
     PlotUtils::Model<CVUniverse, MichelEvent>& model,
-    PlotUtils::Model<CVUniverse, MichelEvent>& modelPreBDT,
-    bool BDTon)
+    PlotUtils::Model<CVUniverse, MichelEvent>& modelPreBDT)
 {
   assert(!error_bands["cv"].empty() && "\"cv\" error band is empty!  Can't set Model weight.");
   auto& cvUniv = error_bands["cv"].front();
 
   std::cout << "Starting MC reco loop...\n";
-  const int nEntries = chain->GetEntries();
+  // const int nEntries = chain->GetEntries();
+  const int nEntries = (int)(chain->GetEntries() * entries_portion);
   for (int i=0; i<nEntries; ++i)
   {
     if(i%1000==0) std::cout << i << " / " << nEntries << "\r" <<std::flush;
@@ -142,7 +146,9 @@ void LoopAndFillEventSelection(
         //weight is ignored in isMCSelected() for all but the CV Universe.
         if (!michelcuts.isMCSelected(*universe, myevent, cvWeight).all()) continue; //all is another function that will later help me with sidebands
         const double weight = model.GetWeight(*universe, myevent); //Only calculate the per-universe weight for events that will actually use it.
-        const double weightPreBDT = modelPreBDT.GetWeight(*universe, myevent); // Get pre BDT weight -- 2026/2/20 Ziggy
+        double weightPreBDT(1.0);
+        if(BDTon)
+          weightPreBDT = modelPreBDT.GetWeight(*universe, myevent); // Get pre BDT weight -- 2026/2/20 Ziggy
         for(auto& var: vars) var->selectedMCReco->FillUniverse(universe, var->GetRecoValue(*universe), weight); //"Fake data" for closure
 
         const bool isSignal = michelcuts.isSignal(*universe, weight);
@@ -162,8 +168,8 @@ void LoopAndFillEventSelection(
               // var->dMerr2->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), (weight - weightPreBDT)*(weight - weightPreBDT));
               // Use these matrices to store w0*w1, w0*w0, w1*w1 (so to calculate covariance)
               var->sum_w0w1->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weight * weightPreBDT);
-              var->sum_w0w0->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weightPreBDT * weightPreBDT);
-              var->sum_w1w1->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weight * weight);
+              // var->sum_w0w0->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weightPreBDT * weightPreBDT);
+              // var->sum_w1w1->FillUniverse(universe, var->GetRecoValue(*universe), var->GetTrueValue(*universe), weight * weight);
             }
           }
 
@@ -196,7 +202,8 @@ void LoopAndFillData( PlotUtils::ChainWrapper* data,
 
 {
   std::cout << "Starting data loop...\n";
-  const int nEntries = data->GetEntries();
+  // const int nEntries = data->GetEntries();
+  const int nEntries = (int)(data->GetEntries() * entries_portion);
   for (int i=0; i<data->GetEntries(); ++i) {
     for (auto universe : data_band) {
       universe->SetEntry(i);
@@ -231,7 +238,8 @@ void LoopAndFillEffDenom( PlotUtils::ChainWrapper* truth,
   auto& cvUniv = truth_bands["cv"].front();
 
   std::cout << "Starting efficiency denominator loop...\n";
-  const int nEntries = truth->GetEntries();
+  // const int nEntries = truth->GetEntries();
+  const int nEntries = (int)(truth->GetEntries() * entries_portion);
   for (int i=0; i<nEntries; ++i)
   {
     if(i%1000==0) std::cout << i << " / " << nEntries << "\r" << std::flush;
@@ -357,7 +365,8 @@ int main(const int argc, const char** argv)
   //TODO: Look in INSTALL_DIR if files not found?
   const std::string mc_file_list = argv[2],
                     data_file_list = argv[1];
-  const int category = std::stoi(argv[3]), BDTon = std::stoi(argv[4]); // 3rd, 4th arguments -- Ziggy
+  category = std::stoi(argv[3]);
+  BDTon = std::stoi(argv[4]); // 3rd, 4th arguments -- Ziggy
 
   //Check that necessary TTrees exist in the first file of mc_file_list and data_file_list
   std::string reco_tree_name;
@@ -462,11 +471,12 @@ int main(const int argc, const char** argv)
   // Reweight elastic FSI bug events to 0.0 -- 2026/1/26 Ziggy
   MnvTunev1.emplace_back(new PlotUtils::ElasticFSIReweighter<CVUniverse, MichelEvent>());
   // CCQE-like BDT reweight -- 2026/1/15 Ziggy
-  PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>* bdt_rw = nullptr;
+  // PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>* bdt_rw = nullptr;
   if(BDTon)
   {
-    bdt_rw = new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>();
-    MnvTunev1.emplace_back(bdt_rw);
+    // bdt_rw = new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>();
+    // MnvTunev1.emplace_back(bdt_rw);
+    MnvTunev1.emplace_back(new PlotUtils::CCQELikeBDTReweighter<CVUniverse, MichelEvent>());
   }
 
   PlotUtils::Model<CVUniverse, MichelEvent> model(std::move(MnvTunev1));
@@ -501,12 +511,13 @@ int main(const int argc, const char** argv)
                       dansPzBins = {1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 15, 20, 40, 60},
                       robsEmuBins = {0,1,2,3,4,5,7,9,12,15,18,22,36,50,75,100,120},
                       // CCQEnu TKI bins -- Ziggy
+                      // Dropped Tejin's first and last bin edges: -1.00e-03, 2.02e+00. (cuz they don't matter...) -- 2026/3/12 Ziggy
                       tejin_dptBins = {
-                        -1.00e-03,  0.00e+00,  2.50e-02,  5.00e-02,  7.50e-02,  1.00e-01,
+                        0.00e+00,  2.50e-02,  5.00e-02,  7.50e-02,  1.00e-01,
                         1.25e-01,  1.50e-01,  1.75e-01,  2.00e-01,  2.25e-01,  2.50e-01,
                         2.75e-01,  3.00e-01,  3.50e-01,  4.00e-01,  4.50e-01,  5.00e-01,
                         5.50e-01,  6.00e-01,  6.50e-01,  7.00e-01,  8.00e-01,  1.00e+00,
-                        1.20e+00,  2.00e+00,  2.02e+00
+                        1.20e+00,  2.00e+00
                       }, // Got this binning from PhysRevD.101.092001 supplemental materials
                       phiAngleBins = {0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100},
                       protonAngleBins = {0,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180},
@@ -638,17 +649,17 @@ int main(const int argc, const char** argv)
     vars =
     {
       // Specialized binning: all >=3p categories 
-      new Variable("leading_p_px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
-      new Variable("leading_p_py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
-      new Variable("leading_p_pz", "p_{z, #p} [GeV/c]", 30, -0.5, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
-      new Variable("sum_Tp", "T_{p} [GeV/c]", 30, 0, 3, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
-      new Variable("muon_py", "p_{y, #mu} [GeV/c]", 30, -1.7, -0.1, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
-      new Variable("muon_pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
-      new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.55, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
+      // new Variable("leading_p_px", "p_{x, #p} [GeV/c]", 30, -0.8, 0.8, &CVUniverse::GetLeadingProtonReactionFramePxReco, &CVUniverse::GetLeadingProtonReactionFramePxTrue),
+      // new Variable("leading_p_py", "p_{y, #p} [GeV/c]", 30, -0.7, 1.5, &CVUniverse::GetLeadingProtonReactionFramePyReco, &CVUniverse::GetLeadingProtonReactionFramePyTrue),
+      // new Variable("leading_p_pz", "p_{z, #p} [GeV/c]", 30, -0.5, 3, &CVUniverse::GetLeadingProtonReactionFramePzReco, &CVUniverse::GetLeadingProtonReactionFramePzTrue),
+      // new Variable("sum_Tp", "T_{p} [GeV/c]", 30, 0, 3, &CVUniverse::GetCCQELikeTotalTpReco, &CVUniverse::GetTotalProtonTp),
+      // new Variable("muon_py", "p_{y, #mu} [GeV/c]", 30, -1.7, -0.1, &CVUniverse::GetMuonReactionFramePyReco, &CVUniverse::GetMuonReactionFramePyTrue),
+      // new Variable("muon_pz", "p_{z, #mu} [GeV/c]", 30, 0, 20, &CVUniverse::GetMuonPz, &CVUniverse::GetMuonPzTrue),
+      // new Variable("dpt", "#deltaP_{T} [GeV/c]", 30, 0, 1.55, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
       new Variable("dpt_cai", "#deltaP_{T,cai} [GeV/c]", tejin_dptBins, &CVUniverse::GetDeltaPt, &CVUniverse::GetDeltaPtTrue),
-      new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
-      new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
-      new Variable("Enu", "E_{#nu} [GeV/c]", 30, 0, 20, &CVUniverse::GetEnuGeV, &CVUniverse::GetEnuTrueGeV)
+      // new Variable("dalphat", "#delta#alpha_{T} [deg]", 30, 0, 180, &CVUniverse::GetAlphaT, &CVUniverse::GetAlphaTTrue),
+      // new Variable("dphit", "#delta#phi_{T} [deg]", 30, 0, 180, &CVUniverse::GetPhiT, &CVUniverse::GetPhiTTrue),
+      // new Variable("Enu", "E_{#nu} [GeV/c]", 30, 0, 20, &CVUniverse::GetEnuGeV, &CVUniverse::GetEnuTrueGeV)
     };
   }
 
@@ -682,7 +693,7 @@ int main(const int argc, const char** argv)
   {
     CVUniverse::SetTruth(false);
     // LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model);
-    LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model, modelPreBDT, BDTon); // pass modelPreBDT and BDTon
+    LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model, modelPreBDT); // pass modelPreBDT
     CVUniverse::SetTruth(true);
     LoopAndFillEffDenom(options.m_truth, truth_bands, vars, vars2D, mycuts, model);
     options.PrintMacroConfiguration(argv[0]);
@@ -751,18 +762,18 @@ int main(const int argc, const char** argv)
 
     std::cout << "Success" << std::endl;
 
-    // Print total weights of CCQE-like categories -- Ziggy 2/6/2026 
-    if(BDTon)
-    {
-      std::cout << "BDT reweight total weights: ";
-      for (double w : bdt_rw->GetTotalWeights())
-        std::cout << w << " ";
-      std::cout << std::endl;
-      std::cout << "BDT reweight number of events: ";
-      for (int n : bdt_rw->GetnCCQELikeEvents())
-        std::cout << n << " ";
-      std::cout << std::endl;
-    }
+    // // Print total weights of CCQE-like categories -- Ziggy 2/6/2026 
+    // if(BDTon)
+    // {
+    //   std::cout << "BDT reweight total weights: ";
+    //   for (double w : bdt_rw->GetTotalWeights())
+    //     std::cout << w << " ";
+    //   std::cout << std::endl;
+    //   std::cout << "BDT reweight number of events: ";
+    //   for (int n : bdt_rw->GetnCCQELikeEvents())
+    //     std::cout << n << " ";
+    //   std::cout << std::endl;
+    // }
 
   }
   catch(const ROOT::exception& e)

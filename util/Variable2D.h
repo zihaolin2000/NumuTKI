@@ -30,6 +30,7 @@ class Variable2D: public PlotUtils::Variable2DBase<CVUniverse>
 
       efficiencyNumerator = new Hist((GetNameX() + "_" + GetNameY() + "_efficiency_numerator").c_str(), GetName().c_str(), GetBinVecX(), GetBinVecY(), mc_error_bands);
       efficiencyDenominator = new Hist((GetNameX() + "_" + GetNameY() + "_efficiency_denominator").c_str(), GetName().c_str(), GetBinVecX(), GetBinVecY(), truth_error_bands);
+      effDenom_sum_w0w1 = new Hist((GetNameX() + "_" + GetNameY() + "_effDenom_sum_w0w1").c_str(), GetName().c_str(), GetBinVecX(), GetBinVecY(), truth_error_bands);
     }
 
     //Histograms to be filled
@@ -37,6 +38,7 @@ class Variable2D: public PlotUtils::Variable2DBase<CVUniverse>
     Hist* dataHist;  
     Hist* efficiencyNumerator;
     Hist* efficiencyDenominator;
+    Hist* effDenom_sum_w0w1;
 
     void InitializeDATAHists(std::vector<CVUniverse*>& data_error_bands)
     {
@@ -72,6 +74,11 @@ class Variable2D: public PlotUtils::Variable2DBase<CVUniverse>
         efficiencyDenominator->hist->SetDirectory(&file);
         efficiencyDenominator->hist->Write();
       }
+      if(effDenom_sum_w0w1)
+      {
+        effDenom_sum_w0w1->hist->SetDirectory(&file);
+        effDenom_sum_w0w1->hist->Write();
+      }
     }
 
     //Only call this manually if you Draw(), Add(), or Divide() plots in this
@@ -84,6 +91,7 @@ class Variable2D: public PlotUtils::Variable2DBase<CVUniverse>
       if(dataHist) dataHist->SyncCVHistos();
       if(efficiencyNumerator) efficiencyNumerator->SyncCVHistos();
       if(efficiencyDenominator) efficiencyDenominator->SyncCVHistos();
+      if(effDenom_sum_w0w1) effDenom_sum_w0w1->SyncCVHistos();
     }
 };
 

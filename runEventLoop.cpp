@@ -230,9 +230,10 @@ void LoopAndFillData( PlotUtils::ChainWrapper* data,
 void LoopAndFillEffDenom( PlotUtils::ChainWrapper* truth,
     				std::map<std::string, std::vector<CVUniverse*> > truth_bands,
     				std::vector<Variable*> vars,
-                                std::vector<Variable2D*> vars2D,
+            std::vector<Variable2D*> vars2D,
     				PlotUtils::Cutter<CVUniverse, MichelEvent>& michelcuts,
-                                PlotUtils::Model<CVUniverse, MichelEvent>& model)
+            PlotUtils::Model<CVUniverse, MichelEvent>& model,
+            PlotUtils::Model<CVUniverse, MichelEvent>& modelPreBDT)
 {
   assert(!truth_bands["cv"].empty() && "\"cv\" error band is empty!  Could not set Model entry.");
   auto& cvUniv = truth_bands["cv"].front();
@@ -248,7 +249,7 @@ void LoopAndFillEffDenom( PlotUtils::ChainWrapper* truth,
     cvUniv->SetEntry(i);
     model.SetEntry(*cvUniv, cvEvent);
     const double cvWeight = model.GetWeight(*cvUniv, cvEvent);
-
+    modelPreBDT.SetEntry(*cvUniv, cvEvent); // SetEntry of pre BDT model for bookkeeping -- Ziggy
     //=========================================
     // Systematics loop(s)
     //=========================================
@@ -264,11 +265,16 @@ void LoopAndFillEffDenom( PlotUtils::ChainWrapper* truth,
 
         if (!michelcuts.isEfficiencyDenom(*universe, cvWeight)) continue; //Weight is ignored for isEfficiencyDenom() in all but the CV universe 
         const double weight = model.GetWeight(*universe, myevent); //Only calculate the weight for events that will use it
+        double weightPreBDT(1.0);
+        if(BDTon)
+          weightPreBDT = modelPreBDT.GetWeight(*universe, myevent); // Get pre BDT weight -- 2026/2/20 Ziggy 
 
         //Fill efficiency denominator now: 
         for(auto var: vars)
         {
           var->efficiencyDenominator->FillUniverse(universe, var->GetTrueValue(*universe), weight);
+          if(BDTon)
+            var->effDenom_sum_w0w1->FillUniverse(universe, var->GetTrueValue(*universe), weight * weightPreBDT);
         }
 
         for(auto var: vars2D)
@@ -695,7 +701,7 @@ int main(const int argc, const char** argv)
     // LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model);
     LoopAndFillEventSelection(options.m_mc, error_bands, vars, vars2D, studies, mycuts, model, modelPreBDT); // pass modelPreBDT
     CVUniverse::SetTruth(true);
-    LoopAndFillEffDenom(options.m_truth, truth_bands, vars, vars2D, mycuts, model);
+    LoopAndFillEffDenom(options.m_truth, truth_bands, vars, vars2D, mycuts, model, modelPreBDT); // pass modelPreBDT
     options.PrintMacroConfiguration(argv[0]);
     std::cout << "MC cut summary:\n" << mycuts << "\n";
     mycuts.resetStats();
